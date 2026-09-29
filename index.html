@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0b0a1a" />
+<meta name="color-scheme" content="dark" />
+<meta name="description" content="Emoji Sort — sort all emojis into matching tubes." />
+<title>Emoji Sort</title>
+<style>
+  :root{
+    --ease: cubic-bezier(.22,.9,.28,1);
+    --ink: #f3f0ff;
+    --btn-max: 320px;
+  }
+
+  *,*::before,*::after{ box-sizing:border-box; }
+
+  html{
+    height:100%;
+    -webkit-text-size-adjust:100%;
+    text-size-adjust:100%;
+  }
+
+  body{
+    margin:0;
+    height:100%;
+    overflow:hidden;
+    overscroll-behavior:none;
+    background:#0b0a1a;
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,
+                "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    -webkit-tap-highlight-color:transparent;
+    -webkit-user-select:none;
+    user-select:none;
+    touch-action:manipulation;   /* kills double-tap zoom */
+  }
+
+  /* ---------------- Background ---------------- */
+
+  .bg{
+    position:fixed;
+    inset:0;
+    z-index:0;
+    pointer-events:none;
+    background:
+      radial-gradient(95% 62% at 50% 36%,
+        rgba(96,64,190,.42) 0%,
+        rgba(59,42,107,.20) 44%,
+        rgba(11,10,26,0) 72%),
+      linear-gradient(165deg,#0b0a1a 0%, #1a1333 46%, #150f2b 76%, #0b0a1a 100%);
+    animation: bgIn .55s ease-out both;
+  }
+
+  .glow{
+    position:fixed;
+    left:50%;
+    top:42%;
+    width:min(140vw, 900px);
+    aspect-ratio:1 / 1;
+    transform:translate(-50%,-50%);
+    z-index:0;
+    pointer-events:none;
+    background:radial-gradient(circle,
+      rgba(124,92,255,.30) 0%,
+      rgba(124,92,255,.11) 38%,
+      rgba(124,92,255,0) 68%);
+    animation: glowIn .8s ease-out both, breathe 9s ease-in-out 1s infinite;
+  }
+
+  @keyframes bgIn{ from{ opacity:0 } to{ opacity:1 } }
+  @keyframes glowIn{ from{ opacity:0 } to{ opacity:1 } }
+  @keyframes breathe{
+    0%,100%{ opacity:.72; transform:translate(-50%,-50%) scale(1); }
+    50%    { opacity:1;   transform:translate(-50%,-50%) scale(1.06); }
+  }
+
+  /* ---------------- Floating emojis ---------------- */
+
+  .floaters{
+    position:fixed;
+    inset:0;
+    z-index:1;
+    overflow:hidden;
+    pointer-events:none;
+    contain:strict;
+  }
+
+  .floater{
+    position:absolute;
+    display:block;
+    line-height:1;
+    opacity:var(--op,.24);
+    will-change:transform;
+    transform:translate3d(0,0,0) rotate(var(--rot,0deg));
+    animation: float var(--dur,22s) ease-in-out var(--delay,0s) infinite alternate;
+  }
+
+  @keyframes float{
+    from{ transform: translate3d(0,0,0) rotate(var(--rot,0deg)); }
+    to  { transform: translate3d(var(--dx,0px), var(--dy,0px), 0)
+                     rotate(calc(var(--rot,0deg) + 14deg)); }
+  }
+
+  /* ---------------- Layout ---------------- */
+
+  .menu{
+    position:relative;
+    z-index:2;
+    min-height:100vh;
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    overflow-y:auto;
+    overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .center{
+    flex:1 1 auto;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:clamp(30px, 7vh, 56px);
+    padding:
+      calc(32px + env(safe-area-inset-top))
+      calc(22px + env(safe-area-inset-right))
+      24px
+      calc(22px + env(safe-area-inset-left));
+  }
+
+  /* ---------------- Logo ---------------- */
+
+  .logo{
+    display:flex;
+    justify-content:center;
+    text-align:center;
+    max-width:340px;
+  }
+
+  .logo-inner{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    transform-origin:50% 45%;
+    animation: pulse 4.2s ease-in-out .6s infinite;
+  }
+
+  @keyframes pulse{
+    0%,100%{ transform:scale(1); }
+    50%    { transform:scale(1.03); }
+  }
+
+  .logo-emoji{
+    font-size:clamp(68px, 21vw, 104px);
+    line-height:1;
+    margin-bottom:14px;
+    filter:drop-shadow(0 0 26px rgba(140,110,255,.55))
+           drop-shadow(0 6px 18px rgba(0,0,0,.45));
+  }
+
+  .title{
+    margin:0;
+    font-size:clamp(26px, 8.5vw, 38px);
+    font-weight:800;
+    letter-spacing:.13em;
+    text-indent:.13em;              /* keeps optical centering */
+    background:linear-gradient(180deg,#ffffff 0%, #d5c9ff 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    text-shadow:0 0 30px rgba(124,92,255,.35);
+  }
+
+  .subtitle{
+    margin:12px 0 0;
+    max-width:290px;
+    font-size:14.5px;
+    line-height:1.5;
+    font-weight:500;
+    color:rgba(232,226,255,.62);
+  }
+
+  /* ---------------- Buttons ---------------- */
+
+  .actions{
+    width:100%;
+    max-width:var(--btn-max);
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+
+  .btn{
+    width:100%;
+    min-height:56px;
+    padding:15px 20px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+
+    border-radius:19px;
+    border:1px solid rgba(255,255,255,.16);
+    background:linear-gradient(180deg, rgba(255,255,255,.13), rgba(255,255,255,.055));
+    -webkit-backdrop-filter:blur(14px) saturate(140%);
+    backdrop-filter:blur(14px) saturate(140%);
+
+    color:var(--ink);
+    font:inherit;
+    font-size:17px;
+    font-weight:650;
+    letter-spacing:.02em;
+    cursor:pointer;
+
+    box-shadow:
+      0 8px 24px rgba(0,0,0,.30),
+      inset 0 1px 0 rgba(255,255,255,.14);
+
+    transition: transform .12s var(--ease),
+                box-shadow .22s ease,
+                background .22s ease,
+                border-color .22s ease;
+
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  .btn-primary{
+    background:linear-gradient(180deg,#7c5cff 0%, #5a37d6 100%);
+    border-color:rgba(255,255,255,.28);
+    box-shadow:
+      0 10px 30px rgba(94,58,214,.45),
+      0 2px 8px rgba(0,0,0,.35),
+      inset 0 1px 0 rgba(255,255,255,.30);
+  }
+
+  .btn:active{
+    transform:scale(.965);
+    box-shadow:0 4px 14px rgba(0,0,0,.30);
+  }
+
+  .btn:focus-visible{
+    outline:2px solid rgba(170,142,255,.95);
+    outline-offset:3px;
+  }
+
+  @media (hover:hover) and (pointer:fine){
+    .btn:hover{ transform:translateY(-1px); }
+    .btn:active{ transform:scale(.965); }
+  }
+
+  /* ---------------- Footer ---------------- */
+
+  .footer{
+    flex:0 0 auto;
+    padding:0 16px calc(16px + env(safe-area-inset-bottom));
+    text-align:center;
+    font-size:12px;
+    font-weight:500;
+    letter-spacing:.09em;
+    color:rgba(255,255,255,.5);
+  }
+
+  /* ---------------- Entrance animation ---------------- */
+
+  .rise{
+    /* 'backwards' (not 'both') so :active transforms keep working after it ends */
+    animation: rise .36s var(--ease) backwards;
+  }
+
+  @keyframes rise{
+    from{ opacity:0; transform: translateY(16px) scale(.985); }
+    to  { opacity:1; transform: none; }
+  }
+
+  .logo.rise                 { animation-delay:.04s; }
+  .actions .btn:nth-child(1) { animation-delay:.16s; }
+  .footer.rise               { animation-delay:.26s; }
+  /* total ≈ 620ms */
+
+  /* ---------------- Accessibility ---------------- */
+
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{
+      animation-duration:.001ms !important;
+      animation-delay:0ms !important;
+      animation-iteration-count:1 !important;
+      transition-duration:.001ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <div class="bg" aria-hidden="true"></div>
+  <div class="glow" aria-hidden="true"></div>
+  <div class="floaters" id="floaters" aria-hidden="true"></div>
+
+  <main class="menu">
+    <div class="center">
+
+      <div class="logo rise">
+        <div class="logo-inner">
+          <div class="logo-emoji" aria-hidden="true">😀</div>
+          <h1 class="title">EMOJI SORT</h1>
+          <p class="subtitle">Sort all emojis into matching tubes.</p>
+        </div>
+      </div>
+
+      <nav class="actions" aria-label="Main menu">
+        <button class="btn btn-primary rise" id="btnPlay" type="button">▶ Play</button>
+      </nav>
+
+    </div>
+
+    <footer class="footer rise">Version 1.0</footer>
+  </main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* =========================================================
+     Floating background emojis (10 nodes, transform-only)
+     ========================================================= */
+     // Preload button click sound
+const playButtonSound = new Audio("sounds/buttonclick.mp3");
+playButtonSound.preload = "auto";
+playButtonSound.load();
+  var EMOJIS = ['😀','😎','🥳','🤖','🐱','🍔','⚽','🎃','⭐','🎈','🍩','😀'];
+  var COUNT  = 10;
+  var layer  = document.getElementById('floaters');
+  var frag   = document.createDocumentFragment();
+
+  for (var i = 0; i < COUNT; i++) {
+    var el = document.createElement('span');
+    el.className = 'floater';
+    el.textContent = EMOJIS[i % EMOJIS.length];
+
+    el.style.left     = (2 + Math.random() * 90).toFixed(2) + '%';
+    el.style.top      = (3 + Math.random() * 88).toFixed(2) + '%';
+    el.style.fontSize = (18 + Math.random() * 30).toFixed(0) + 'px';
+
+    el.style.setProperty('--op',    (0.20 + Math.random() * 0.10).toFixed(2));
+    el.style.setProperty('--dx',    Math.round(Math.random() * 44 - 22) + 'px');
+    el.style.setProperty('--dy',    Math.round(Math.random() * 56 - 28) + 'px');
+    el.style.setProperty('--rot',   Math.round(Math.random() * 40 - 20) + 'deg');
+    el.style.setProperty('--dur',   (18 + Math.random() * 14).toFixed(1) + 's');
+    el.style.setProperty('--delay', (-Math.random() * 24).toFixed(1) + 's');
+
+    frag.appendChild(el);
+  }
+  layer.appendChild(frag);
+
+  /* =========================================================
+     Navigation — hand off to the game
+     ========================================================= */
+  var btnPlay = document.getElementById('btnPlay');
+
+  function startGame() {
+  // Play button sound
+  playButtonSound.currentTime = 0;
+  playButtonSound.play().catch(() => {});
+
+  // Wait a little before navigating
+  setTimeout(function () {
+    if (typeof window.startEmojiSort === 'function') {
+      window.startEmojiSort();
+      return;
+    }
+
+    window.location.href = "levels.html";
+  }, 400); // Adjust delay if needed
+}
+
+  btnPlay.addEventListener('click', startGame, { passive: true });
+
+})();
+</script>
+</body>
+</html>
