@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b0a1a">
+<title>Emoji Sort</title>
+<!-- CrazyGames SDK: verify this URL against the current CrazyGames docs. The game also runs fine without it. -->
+<script src="https://integration.gamepix.com/sdk/v3/gamepix.sdk.js"></script>
+<style>
+:root{--a:hsl(262 80% 62%);--ink:#f3f0ff}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;user-select:none;touch-action:manipulation;background:radial-gradient(110% 70% at 50% 0,#2b2166,#150f2b 55%,#0b0a1a)}
+.scr{position:fixed;inset:0;display:none;flex-direction:column;padding:env(safe-area-inset-top) 14px env(safe-area-inset-bottom);overflow-y:auto}
+.scr.on{display:flex}
+.c{align-items:center;justify-content:center;gap:14px;text-align:center}
+button{font:inherit;color:inherit;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.1);border-radius:14px;padding:10px 14px;cursor:pointer}
+button:active{transform:scale(.95)}
+button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.big{background:linear-gradient(#7c5cff,#5a37d6);font-weight:800;font-size:20px;padding:15px 44px;border-radius:18px;box-shadow:0 8px 26px rgba(94,58,214,.5)}
+h1{margin:0;font-size:34px;letter-spacing:.12em;text-indent:.12em}
+h3,p{margin:0}.sub{opacity:.65;font-size:14px}
+#logo{font-size:76px;animation:bob 3s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-8px) rotate(4deg)}}
+#wl{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:min(94vw,420px)}
+#wl button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px;font-size:12px}
+#wl button span{font-size:26px}#wl .cur{border-color:#fff;background:rgba(255,255,255,.2)}
+#hud{display:flex;align-items:center;justify-content:space-between;padding:10px 0 4px}
+#hud b{font-size:20px}#hud span{display:flex;gap:6px}
+#tip{min-height:22px;text-align:center;font-size:14px;font-weight:600;color:#ffe9a6;padding:2px 0 6px}
+#area{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+#tubes{--s:56px;display:flex;flex-wrap:wrap;justify-content:center;gap:calc(var(--s)*.4) 10px}
+.tube{width:calc(var(--s) + 10px);height:calc(var(--s)*4 + 14px);display:flex;flex-direction:column-reverse;align-items:center;padding:5px 0;border:2px solid rgba(255,255,255,.3);border-radius:10px 10px 30px 30px;background:linear-gradient(90deg,rgba(255,255,255,.12),rgba(255,255,255,.03));transition:transform .15s,box-shadow .15s;cursor:pointer}
+.tube.sel{transform:translateY(-14px);border-color:var(--a);box-shadow:0 0 20px var(--a)}
+.tube.done{border-color:#7dffb0;box-shadow:0 0 16px rgba(125,255,176,.55)}
+.tube.hf{outline:3px solid #ffd54a;outline-offset:2px}.tube.ht{outline:3px dashed #7dffb0;outline-offset:2px}
+.tube.shake{animation:sh .3s}
+@keyframes sh{25%{translate:-5px}75%{translate:5px}}
+.b{width:100%;height:var(--s);display:flex;align-items:center;justify-content:center;font-size:calc(var(--s)*.76);line-height:1}
+.b.drop{animation:dr .32s cubic-bezier(.3,1.5,.5,1)}
+@keyframes dr{from{transform:translateY(-70px);opacity:.2}}
+#pu{display:flex;gap:8px;justify-content:center;padding:8px 0 12px}
+#pu button{position:relative;display:flex;flex-direction:column;align-items:center;font-size:12px;min-width:68px;gap:2px}
+#pu button i{font-style:normal;font-size:22px}
+#pu button em{position:absolute;top:-6px;right:-6px;background:var(--a);border-radius:10px;font:700 11px system-ui;padding:2px 6px;font-style:normal}
+#pu button.off{opacity:.4}
+.ov{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,4,15,.72)}
+.ov.on{display:flex}
+.card{display:flex;flex-direction:column;align-items:center;gap:12px;padding:26px 30px;border-radius:24px;background:#1d1640;border:1px solid rgba(255,255,255,.2);text-align:center;min-width:250px;animation:dr .35s}
+.card button{width:100%}.stars{font-size:38px;letter-spacing:4px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ===== Fusion Mode styles ===== */
+#abg{display:none;position:fixed;inset:-30%;pointer-events:none;background:conic-gradient(#7c5cff66,#2dd4bf55,#f472b666,#7c5cff66);animation:ab 40s linear infinite;opacity:.5}
+body.bg-aurora #abg{display:block}@keyframes ab{to{transform:rotate(360deg)}}
+body.tk-gold .tube:not(.sel):not(.done){border-color:#ffd54a;box-shadow:0 0 10px rgba(255,213,74,.55)}
+body.tk-neon .tube:not(.sel):not(.done){border-color:#4ff;box-shadow:0 0 12px #4ff,inset 0 0 10px rgba(80,255,255,.25)}
+#fx{flex-direction:column;gap:10px;background:rgba(3,2,12,.8);text-align:center}
+#fs{position:relative;width:260px;height:150px}
+.fi,#fr{position:absolute;left:50%;top:50%;font-size:70px;line-height:1;transform:translate(-50%,-50%)}
+.fi{animation:fin .9s cubic-bezier(.6,0,.9,.6) forwards}#fa{--d:-140px}#fb{--d:140px}
+@keyframes fin{from{transform:translate(calc(-50% + var(--d)),-50%)}to{transform:translate(-50%,-50%) scale(.7)}}
+#fr{opacity:0;font-size:96px}
+#fx[data-st="2"] .fi{display:none}
+#fx[data-st="2"] #fr{opacity:1;animation:rp .7s cubic-bezier(.3,1.6,.5,1)}
+@keyframes rp{from{transform:translate(-50%,-50%) scale(0) rotate(-50deg)}}
+#fl{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none}
+#fx[data-st="2"] #fl{animation:fh .5s}@keyframes fh{from{opacity:.9}to{opacity:0}}
+#fx h2{margin:0;font-size:30px}#fn{font-size:18px}
+.rb{background:linear-gradient(90deg,#ff5f6d,#ffd54a,#5fffb0,#5fa8ff,#c77dff);-webkit-background-clip:text;background-clip:text;color:transparent}
+#fpt{position:absolute;left:50%;top:50%;width:0;height:0}
+.pt{position:absolute;left:0;top:0;width:9px;height:9px;border-radius:50%;animation:pf .9s ease-out forwards}
+.pt:not(:empty){background:none!important;width:auto;height:auto;font-size:18px}
+@keyframes pf{from{transform:translate(-50%,-50%) scale(1)}to{transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(.3);opacity:0}}
+#game.cam{animation:cam .9s}
+@keyframes cam{15%{transform:scale(1.04) translate(-4px,2px)}30%{transform:scale(1.05) translate(4px,-2px)}45%{transform:scale(1.04) translate(-3px,-2px)}60%{transform:scale(1.03) translate(2px,2px)}to{transform:none}}
+.fusing .tube{animation:tg 1s ease-in-out infinite}@keyframes tg{50%{transform:scale(1.05);box-shadow:0 0 26px #7dffb0}}
+#fc .card{width:min(94vw,420px);max-height:88vh;overflow-y:auto;justify-content:flex-start}
+#fcg{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+.fcd{display:flex;flex-direction:column;gap:4px;padding:10px 6px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);font-size:20px}
+.fcd.on{background:linear-gradient(160deg,rgba(124,92,255,.4),rgba(255,213,74,.15));border-color:#ffd54a}
+.fcd.sc.on{background:linear-gradient(135deg,#ff5f6d55,#ffd54a55,#5fffb055,#5fa8ff55)}
+.fcd .eq{font-size:17px}.fcd small{font-size:11px;opacity:.7}
+.ac{width:100%;text-align:left;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.06);opacity:.55}.ac.on{opacity:1;background:rgba(255,213,74,.15)}
+#fcr{display:flex;flex-direction:column;gap:6px;width:100%}#fcr .eqp{border-color:#ffd54a}
+#toast{position:fixed;top:calc(12px + env(safe-area-inset-top));left:50%;z-index:20;transform:translate(-50%,-160%);background:#2b1d63;border:1px solid #ffd54a;border-radius:16px;padding:10px 18px;text-align:center;font-size:14px;transition:transform .45s cubic-bezier(.3,1.5,.5,1);pointer-events:none}
+#toast.on{transform:translate(-50%,0)}
+#fh{padding:8px 10px}
+
+/* ===== Special emoji, boss, ambient, personality styles ===== */
+.b{position:relative}
+.b.ice{filter:drop-shadow(0 0 5px #7fe3ff)}
+.b.ice::after{content:"";position:absolute;inset:4%;border-radius:28%;background:rgba(150,230,255,.5);border:2px solid #cff}
+.b.ice.cr::after{border-style:dashed;background:rgba(150,230,255,.28)}
+.b.lz{filter:grayscale(.6)}.b.lz::after{content:"💤";position:absolute;top:-2px;right:-2px;font-size:.4em;animation:zz 2s infinite}
+@keyframes zz{50%{transform:translateY(-6px);opacity:.4}}
+.b.thaw{animation:th .45s}@keyframes th{from{transform:scale(1.35);filter:brightness(2.2)}}
+.b:not(.drop).p-smile{animation:ps 3s ease-in-out infinite}@keyframes ps{50%{transform:scale(1.07)}}
+.b:not(.drop).p-ang{animation:pa 1.2s ease-in-out infinite}.b:not(.drop).p-sh{animation:pa .5s infinite}
+@keyframes pa{20%{transform:translateX(-1.5px)}40%{transform:translateX(1.5px)}60%{transform:none}}
+.b:not(.drop).p-zz{animation:pz 4s ease-in-out infinite}@keyframes pz{50%{transform:rotate(-6deg) translateY(2px)}}
+.b:not(.drop).p-fl{animation:pf2 3s ease-in-out infinite;opacity:.8}@keyframes pf2{50%{transform:translateY(-4px)}}
+.b:not(.drop).p-ht{animation:ph 1.4s ease-in-out infinite}@keyframes ph{50%{transform:scale(1.12)}}
+body.boss{background:radial-gradient(110% 70% at 50% 0,#6a1030,#2a0a1a 55%,#0b0a1a)}
+body.night .b:not(:last-child){filter:brightness(.4)}
+.ev{position:fixed;top:-10vh;z-index:0;font-size:22px;pointer-events:none;animation:fall linear forwards}
+@keyframes fall{to{transform:translate(var(--dx,0),115vh)}}
+.ev.mt{top:10vh;left:0;font-size:34px;animation:mt 1.3s linear forwards}@keyframes mt{from{transform:translate(-20vw,-10vh)}to{transform:translate(120vw,50vh)}}
+.ev.big{top:25vh;left:50%;font-size:min(60vw,260px);opacity:0;margin-left:-.5em;animation:bgf 5s ease-in-out forwards}@keyframes bgf{50%{opacity:.5}}
+.ev.lt{inset:0;top:0;background:#fff;opacity:0;animation:lt .5s forwards}@keyframes lt{10%{opacity:.7}30%{opacity:.1}40%{opacity:.6}to{opacity:0}}
+#cf{position:fixed;left:0;top:0;width:0;height:0;z-index:15;pointer-events:none}#cf .ev{z-index:15}
+
+/* ===== Shop styles ===== */
+body.sb-sunset{background:radial-gradient(110% 70% at 50% 0,#ff7e5f,#6a1b9a 60%,#1a0a2e)}
+body.sb-ocean{background:radial-gradient(110% 70% at 50% 0,#1ea7e8,#0a2a6a 60%,#04122e)}
+body.sb-forest{background:radial-gradient(110% 70% at 50% 0,#3f9a2a,#0f4a35 60%,#04180f)}
+body.sb-galaxy{background:radial-gradient(1.5px 1.5px at 20% 30%,#fff,transparent),radial-gradient(1.5px 1.5px at 70% 20%,#fff,transparent),radial-gradient(2px 2px at 40% 70%,#fff,transparent),radial-gradient(1.5px 1.5px at 85% 60%,#fff,transparent),radial-gradient(110% 70% at 50% 0,#4b2bb5,#120a33 60%,#05030f)}
+body.sb-candy{background:radial-gradient(110% 70% at 50% 0,#ff9ad5,#9b6bff 60%,#2a1450)}
+body.sb-lava{background:radial-gradient(110% 70% at 50% 0,#ff5a1f,#5a0f0f 60%,#1a0505)}
+html body.boss{background:radial-gradient(110% 70% at 50% 0,#6a1030,#2a0a1a 55%,#0b0a1a)}
+body.ts-crystal .tube:not(.sel):not(.done){border-color:#9ff;background:linear-gradient(90deg,rgba(150,255,255,.28),rgba(255,255,255,.04));box-shadow:0 0 10px rgba(120,255,255,.4)}
+body.ts-rainbow .tube:not(.sel):not(.done){border-color:#ff7ad9;box-shadow:0 0 8px #ff7ad9,0 0 14px #7affd9}
+body.ts-wood .tube:not(.sel):not(.done){border-color:#c58b4b;background:linear-gradient(90deg,rgba(197,139,75,.4),rgba(120,70,30,.15))}
+#sh .card{width:min(94vw,420px);max-height:88vh;overflow-y:auto;justify-content:flex-start}
+.shg{display:flex;flex-direction:column;gap:6px;width:100%}
+.shi{display:flex;align-items:center;gap:10px;text-align:left}.shi i{width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.4);flex:none}
+.shi span{flex:1}.shi b{font-size:13px}.shi:disabled{opacity:.45}.shi.eqp{border-color:#ffd54a}
+#sb{padding:8px 10px}#hud{gap:4px}#hud b{font-size:17px}
+
+/* ===== Tutorial styles ===== */
+#tus{position:relative;width:260px;height:150px;display:flex;align-items:center;justify-content:center;gap:24px}
+.mt{display:flex;flex-direction:column-reverse;align-items:center;width:46px;height:132px;padding:3px 0;border:2px solid rgba(255,255,255,.35);border-radius:8px 8px 22px 22px;background:linear-gradient(90deg,rgba(255,255,255,.12),rgba(255,255,255,.03))}
+.mt b{font:400 26px/30px system-ui,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.mt.gl,.mt.rc{animation:tg 1.4s ease-in-out infinite}
+.mt.up{animation:tl 1.8s ease-in-out infinite}@keyframes tl{40%,70%{transform:translateY(-16px);border-color:#a98bff;box-shadow:0 0 18px #a98bff}}
+.hand{position:absolute;bottom:-8px;font-size:34px;font-style:normal;animation:hd 1.8s ease-in-out infinite}@keyframes hd{40%,70%{transform:translateY(-6px) scale(.9)}}
+.fly{position:absolute;font:400 26px/30px system-ui,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;font-style:normal;animation:fly 2.4s ease-in-out infinite}
+@keyframes fly{0%,12%{transform:none}30%{transform:translateY(-26px)}60%{transform:translate(70px,-26px)}78%,90%{transform:translate(70px,0)}to{transform:translate(70px,0);opacity:0}}
+.pb{font-size:28px;padding:8px;border-radius:12px;background:rgba(255,255,255,.12);animation:tg 2s ease-in-out infinite}
+.tuic{font-size:76px;animation:bob 2s ease-in-out infinite}
+#tud{font-size:15px;line-height:1.4;min-height:64px;margin:0}
+#tup{display:flex;gap:6px}#tup i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3)}#tup i.on{background:#ffd54a}
+#tuk{background:none;border:none;opacity:.7}
+</style>
+</head>
+<body>
+<div id="abg"></div>
+
+<div id="menu" class="scr on c">
+  <button data-m style="position:absolute;top:calc(8px + env(safe-area-inset-top));right:12px" aria-label="Sound"></button>
+  <div id="logo">😀</div>
+  <h1>EMOJI SORT</h1>
+  <p class="sub">Pour emojis until every tube holds just one kind.</p>
+  <button class="big" id="play">▶ Play</button>
+  <button id="fcb">🏆 Fusion Collection <small id="fcn"></small></button>
+  <button id="dlb">📅 Daily Challenge <small id="dln"></small></button>
+  <button id="shb">🛒 Shop <small id="shc"></small></button>
+  <button id="htb">❓ How to Play</button>
+  <h3>Worlds</h3>
+  <div id="wl"></div>
+</div>
+
+<div id="game" class="scr">
+  <div id="hud">
+    <button id="back" aria-label="Menu">←</button>
+    <b id="lv">Level 1</b>
+    <span><button id="sb" aria-label="Shop">💰 <i id="cn" style="font-style:normal">0</i></button><button id="fh" aria-label="Fusion Collection">✨ <i id="fp" style="font-style:normal">0</i></button><button data-m aria-label="Sound"></button><button id="pz" aria-label="Pause">⏸</button></span>
+  </div>
+  <div id="tip"></div>
+  <div id="area"><div id="tubes"></div></div>
+  <div id="pu">
+    <button data-p="undo"><i>↩️</i>Undo<em id="bu">1</em></button>
+<button data-p="hint"><i>💡</i>Hint<em id="bh">1</em></button>
+<button data-p="extra"><i>➕</i>Tube<em id="bx">1</em></button>
+<button data-p="restart"><i>🔄</i>Restart<em id="br">1</em></button>
+  </div>
+</div>
+
+<div id="ev"></div><div id="cf"></div>
+<div id="win" class="ov"><div class="card">
+  <div style="font-size:46px">🎉</div><h2 style="margin:0">Level complete</h2>
+  <div class="stars" id="stars"></div><p class="sub" id="wm"></p>
+  <button class="big" id="next" style="padding:12px 20px">Next level</button>
+  <button id="wshop">🛒 Shop</button>
+  <button id="wmenu">Menu</button>
+</div></div>
+
+<div id="pause" class="ov"><div class="card">
+  <h2 style="margin:0">Paused</h2>
+  <button class="big" id="resume" style="padding:12px 20px">Resume</button>
+  <button id="prest">Restart level</button>
+  <button data-m></button>
+  <button id="pht">❓ How to play</button>
+  <button id="pmenu">Menu</button>
+</div></div>
+
+<div id="fx" class="ov" data-st="1">
+  <div id="fs"><span class="fi" id="fa"></span><span class="fi" id="fb"></span><span id="fr"></span><div id="fpt"></div></div>
+  <h2 id="ft"></h2><p id="fn"></p><p class="sub" id="fq"></p><div id="fl"></div>
+</div>
+<div id="fc" class="ov"><div class="card">
+  <h2 style="margin:0">🏆 Fusion Collection</h2><p id="fcs"></p><div id="fst" style="font-size:13px;line-height:1.6"></div>
+  <div id="fcg"></div><h3>Achievements</h3><div id="fca" style="width:100%;display:flex;flex-direction:column;gap:6px"></div>
+  <h3>Fusion cosmetics</h3><p class="sub">Cosmetic only. Buy them with coins in the Shop.</p><div id="fcr"></div>
+  <button class="big" id="fcx" style="padding:12px 20px">Close</button>
+</div></div>
+<div id="sh" class="ov"><div class="card">
+  <h2 style="margin:0">🛒 Shop</h2><p>💰 <b id="shn">0</b> coins</p>
+  <p class="sub">Earn coins from levels, bosses, daily challenges and fusions. Cosmetic items only.</p>
+  <h3>Backgrounds</h3><div id="sbg" class="shg"></div><h3>Tube skins</h3><div id="stb" class="shg"></div>
+  <button class="big" id="shx" style="padding:12px 20px">Close</button>
+</div></div>
+<div id="tu" class="ov"><div class="card" style="width:min(92vw,360px)">
+  <div id="tus"></div><h2 id="tut" style="margin:0"></h2><p id="tud"></p><div id="tup"></div>
+  <button class="big" id="tun" style="padding:12px 20px">Next ▶</button><button id="tuk">Skip</button>
+</div></div>
+<div id="toast"></div>
+
+<script>
+(()=>{'use strict';
+const CAP=4,$=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
+const WORLDS=[
+ {id:'faces',n:'Faces',i:'😀',h:262,e:['😀','😎','🥳','🤖','😡','😱','🤔','😍','🤓','😴']},
+ {id:'animals',n:'Animals',i:'🐶',h:24,e:['🐱','🐶','🦁','🐼','🐸','🐵','🐯','🐰','🦊','🐨']},
+ {id:'food',n:'Food',i:'🍔',h:340,e:['🍕','🍩','🍟','🍦','🍔','🌮','🍎','🍉','🍪','🍓']},
+ {id:'sports',n:'Sports',i:'⚽',h:165,e:['⚽','🏀','🎾','🏈','⚾','🏐','🏓','🥊','🎱','🏒']},
+ {id:'nature',n:'Nature',i:'🌳',h:120,e:['🌳','🌸','🌵','🍄','🌻','🌈','🌙','⭐','🍀','🌊']},
+ {id:'halloween',n:'Halloween',i:'🎃',h:28,e:['🎃','👻','💀','🦇','🧛','🧟','🍬','🔮','🧙','👹']},
+ {id:'christmas',n:'Christmas',i:'🎄',h:350,e:['🎄','🎁','⭐','⛄','🦌','🔔','🍪','🧦','🎅','❄️']}
+];
+let S={w:'faces',p:{},mute:false};
+try{Object.assign(S,JSON.parse(localStorage.getItem('emojisort.v2')||'{}'))}catch(e){}
+/* Safe save migration: adds fusion data and keeps every old key untouched. */
+S.fu=Object.assign({u:{},pts:0,ach:{},rec:null,n:0,sec:0,lv:0,eq:{}},S.fu);
+['u','ach','eq'].forEach(k=>{if(!S.fu[k]||typeof S.fu[k]!=='object')S.fu[k]={}});
+S.st=Object.assign({gp:0,lc:0,pl:0,mv:0,tm:0,bd:0,su:0},S.st);S.dy=Object.assign({k:0,done:0,t:0,m:0,s:0,sc:0},S.dy);S.bm=S.bm||{};S.cb=S.cb||0;
+S.sh=Object.assign({c:0,own:{},eq:{}},S.sh);['own','eq'].forEach(k=>{if(!S.sh[k]||typeof S.sh[k]!=='object')S.sh[k]={}});
+S.tu=(S.tu&&typeof S.tu==='object')?S.tu:{};
+const save=()=>{try{localStorage.setItem('emojisort.v2',JSON.stringify(S))}catch(e){}};
+const W=()=>WORLDS.find(w=>w.id===(daily?dw:S.w))||WORLDS[0];
+
+/* ---- GamePix SDK: lifecycle + ads (all safe no-ops if the SDK is missing) ---- */
+const sdk=()=>window.CrazyGames&&window.CrazyGames.SDK; // legacy, harmless
+const cg=f=>{try{sdk().game[f]()}catch(e){}};
+/* Init the SDK as soon as the script is parsed. */
+try{window.GamePix&&typeof GamePix.loaded==='function'&&GamePix.loaded()}catch(e){}
+/* Ads: always resolve, never reject — so callers can chain .then() safely. */
+const ADS={
+  interstitial:()=>{
+    try{
+      if(window.GamePix&&typeof GamePix.interstitialAd==='function'){
+        const p=GamePix.interstitialAd();
+        if(p&&typeof p.then==='function')return p;
+      }
+    }catch(e){}
+    return Promise.resolve({success:false});
+  },
+  rewarded:()=>{
+    console.log("rewarded() called");
+
+    const fail=m=>{
+        console.log("rewardAd:",m);
+        try{floatTxt("📺 Ad unavailable or not finished")}catch(e){}
+        return {success:false};
+    };
+
+    try{
+        console.log(window.GamePix);
+        console.log(typeof GamePix.rewardAd);
+
+        if(window.GamePix && typeof GamePix.rewardAd==="function"){
+            console.log("Calling GamePix.rewardAd()");
+
+            return Promise.race([
+                Promise.resolve(GamePix.rewardAd()),
+                new Promise(r=>setTimeout(()=>r(null),90000))
+            ]).then(r=>{
+                console.log("Reward result:",r);
+                return r && r.success ? r : fail("not completed");
+            }).catch(e=>{
+                console.log(e);
+                return fail(e);
+            });
+        }
+
+        console.log("rewardAd function missing");
+
+    }catch(e){
+        console.log(e);
+    }
+
+    return Promise.resolve(fail("GamePix.rewardAd not available"));
+}
+};
+
+/* ---- Sound (uses the mp3 files already in /sounds) ---- */
+const SND={tap:'tubeclick',drop:'emojifly',bad:'wrongtube',win:'victory',click:'buttonclick',pow:'powerup'},A={};
+for(const k in SND){const a=new Audio('sounds/'+SND[k]+'.mp3');a.preload='auto';a.volume=.7;A[k]=a}
+const sfx=k=>{if(S.mute)return;try{const a=A[k];a.currentTime=0;const p=a.play();p&&p.catch(()=>{})}catch(e){}};
+const muteUI=()=>$$('[data-m]').forEach(b=>b.textContent=b.closest('#hud')?(S.mute?'🔇':'🔊'):(S.mute?'🔇 Sound off':'🔊 Sound on'));
+
+/* GEN-START ---- Level generation: seeded, solvable by construction ---- */
+function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+/* Difficulty curve: 3 colors at level 1, +1 color every 3 levels (max 10); 2 spare tubes, sometimes 1 after level 12 */
+function cfg(l){const b=isBoss(l);return{types:Math.min(3+Math.floor((l-1)/3)+(b?1:0),10),empty:b?3:(l>12&&l%3===0)?1:2}}
+function solved(t){return t.every(T=>!T.length||(T.length===CAP&&T.every(x=>x===T[0])))}
+function rev(t,r){const c=[];
+ t.forEach((T,i)=>{const L=T.length;if(!L)return;const top=T[L-1];let run=1;while(run<L&&T[L-1-run]===top)run++;const mk=L>run?run-1:run;if(mk>=1)c.push([i,mk,top])});
+ if(!c.length)return false;
+ const[b,mk,e]=c[Math.floor(r()*c.length)],k=1+Math.floor(r()*mk),d=[];
+ t.forEach((X,i)=>{if(i!==b&&X.length+k<=CAP&&(!X.length||X[X.length-1]!==e))d.push(i)});
+ if(!d.length)return false;
+ const a=d[Math.floor(r()*d.length)];for(let x=0;x<k;x++)t[a].push(t[b].pop());return true}
+function gen(l){const{types,empty}=cfg(l),r=rng(l*7919+13+seedX);let t;
+ for(let n=0;n<20;n++){t=[];for(let i=0;i<types;i++)t.push(Array(CAP).fill(i));for(let i=0;i<empty;i++)t.push([]);
+  const steps=30+types*16;let d=0;for(let k=0;k<steps*4&&d<steps;k++)if(rev(t,r))d++;
+  if(!solved(t))break}
+ return{t,types}}
+/* GEN-END */
+
+/* ---- Game state ---- */
+let tubes=[],emo=[],level=1,sel=-1,hist=[],moves=0,assists=0,hintsLeft=1,extraLeft=1,undosLeft=1,restartsLeft=1,hint=null,hintT=0,drop=null,bad=-1,busy=false;
+let winCount=0,_keepRestarts=false;
+const can=(a,b)=>{if(a===b)return false;const X=tubes[a],Y=tubes[b];if(!X.length||Y.length>=CAP||lked(a)||lked(b))return false;return!Y.length||Y[Y.length-1]===X[X.length-1]||(gh>0&&emo[X[X.length-1]]==='👻')};
+const show=id=>{$$('.scr').forEach(s=>s.classList.toggle('on',s.id===id))};
+const ov=(id,on)=>$(id).classList.toggle('on',on);
+
+function layout(){const a=$('#area'),Wd=a.clientWidth,H=a.clientHeight,n=tubes.length,g=10;let best=0;
+ for(let r=1;r<=3;r++){const c=Math.ceil(n/r);let s=Math.min((Wd-g*(c-1))/c-14,innerWidth>=900?96:72);
+  const need=r*(s*CAP+14)+(r-1)*s*.4+20;if(need>H)s=(H-20-(r-1)*s*.4-r*14)/(r*CAP);if(s>best)best=s}
+ $('#tubes').style.setProperty('--s',Math.max(24,Math.floor(best))+'px')}
+function render(){const el=$('#tubes');el.innerHTML='';
+ tubes.forEach((T,i)=>{const d=document.createElement('div');
+  d.className='tube'+(i===sel?' sel':'')+(T.length===CAP&&T.every(x=>x===T[0])?' done':'')+(hint&&hint[0]===i?' hf':'')+(hint&&hint[1]===i?' ht':'')+(i===bad?' shake':'');
+  T.forEach((b,j)=>{const s=document.createElement('span');s.className='b'+(drop&&drop.i===i&&j>=T.length-drop.k?' drop':'');s.textContent=emo[b];s.className+=bcls(i,j,b);d.appendChild(s)});
+  d.onclick=()=>tap(i);el.appendChild(d)});
+ bad=-1;drop=null;brk=[];layout();
+ $('#bh').textContent=hintsLeft;$('#bx').textContent=extraLeft;$('#bu').textContent=undosLeft;$('#br').textContent=restartsLeft;
+$('[data-p=hint]').classList.toggle('off',false);
+$('[data-p=extra]').classList.toggle('off',tubes.length>=14);
+$('[data-p=undo]').classList.toggle('off',!hist.length);
+$('[data-p=restart]').classList.toggle('off',false)}
+function tipUpd(){$('#tip').textContent=spTip()}
+
+function tap(i){if(busy)return;clearHint();if(lked(i)){icetap(i);return}
+ if(sel<0){if(!tubes[i].length){sfx('bad');return}sel=i;sfx('tap')}
+ else if(sel===i){sel=-1;sfx('tap')}
+ else if(can(sel,i)){pour(sel,i);sel=-1}
+ else{sfx('bad');bad=i;sel=tubes[i].length?i:-1}
+ render();tipUpd();if(!busy&&solved(tubes)){busy=true;setTimeout(win,650)}}
+function pour(a,b){const X=tubes[a],Y=tubes[b],c=X[X.length-1],d0=doneN();let k=0;snap();if(gh>0&&Y.length&&Y[Y.length-1]!==c&&emo[c]==='👻')gh--;
+ while(X.length&&X[X.length-1]===c&&Y.length<CAP&&!lked(a)){Y.push(X.pop());k++}
+ drop={i:b,k};moves++;sfx('drop');after(b,d0)}
+
+function clearHint(){clearTimeout(hintT);hint=null}
+function findHint(){let best=null,bs=0;
+ for(let a=0;a<tubes.length;a++)for(let b=0;b<tubes.length;b++){if(!can(a,b))continue;
+  const X=tubes[a],Y=tubes[b],uni=X.every(x=>x===X[0]);
+  if(uni&&(!Y.length||X.length===CAP))continue;
+  const s=Y.length?(uni?2:3):1;if(s>bs){bs=s;best=[a,b]}}
+ return best}
+function showHint(free){clearHint();const h = findHint();
+
+    if(!h){
+        sfx('bad');
+        return;
+    }
+
+    if(!free){
+        hintsLeft--;
+        assists++;
+    }
+
+    hint = h;
+    sel = -1;
+    sfx('pow');
+    render();
+
+    hintT = setTimeout(() => {
+        hint = null;
+        render();
+    }, 20400);
+}
+
+function doUndo(){
+  const h=hist.pop();
+  tubes=h;lk=JSON.parse(h.lk||'[]');gh=h.gh||0;
+  assists++;undosLeft--;sel=-1;clearHint();sfx('pow');render();
+}
+function power(p){
+  if(busy)return;
+  if((p==='undo'&&chl==='noundo')||(p==='hint'&&chl==='nohint'))return sfx('bad');
+
+  /* ---- UNDO: 1 free, then rewarded ad ---- */
+  if(p==='undo'){
+    if(!hist.length)return sfx('bad');
+    if(undosLeft>0)return doUndo();
+    sfx('click');busy=true;
+    ADS.rewarded().then(r=>{
+      busy=false;
+      if(r&&r.success){undosLeft++;doUndo()}
+      else sfx('bad');
+    });
+    return;
+  }
+  /* ---- HINT: 1 free, then rewarded ad ---- */
+  if(p==='hint'){
+    if(hintsLeft>0){showHint(false);return}
+      sfx('click');busy=true;
+    ADS.rewarded().then(r => {
+    busy = false;
+
+    if (r && r.success) {
+        showHint(true);
+    } else {
+        sfx('bad');
+    }
+}).catch(() => {
+    busy = false;
+    sfx('bad');
+});
+    return;
+  }
+  /* ---- EXTRA TUBE: 1 free, then rewarded ad ---- */
+  if(p==='extra'){
+    if(tubes.length>=14)return sfx('bad');
+    if(extraLeft>0){tubes.push([]);extraLeft--;hist=[];sfx('pow');render();return}
+    sfx('click');busy=true;
+    ADS.rewarded().then(r=>{
+      busy=false;
+      if(r&&r.success){tubes.push([]);hist=[];sfx('win');render()}
+      else sfx('bad');
+    });
+    return;
+  }
+  /* ---- RESTART: 1 free, then rewarded ad ---- */
+  if(p==='restart'){
+    if(restartsLeft>0){
+      restartsLeft--;sfx('click');
+      _keepRestarts=true;startLevel(level,daily?seedX:0);
+      return;
+    }
+    sfx('click');busy=true;
+    ADS.rewarded().then(r=>{
+      busy=false;
+      if(r&&r.success){_keepRestarts=true;startLevel(level,daily?seedX:0)}
+      else sfx('bad');
+    });
+    return;
+  }
+  render();
+}
+
+function startLevel(l,d){daily=!!d;seedX=d||0;level=l;const g=gen(l);tubes=g.t;
+ const r=rng(l*31+5+seedX),pool=W().e.slice();for(let i=pool.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
+emo=pool.slice(0,g.types);sel=-1;hist=[];moves=0;assists=0;hintsLeft=1;extraLeft=1;undosLeft=1;busy=false;clearHint();
+if(!_keepRestarts)restartsLeft=1;
+_keepRestarts=false;
+ document.documentElement.style.setProperty('--a','hsl('+W().h+' 80% 62%)');
+ $('#lv').textContent=W().i+' Level '+l;ov('#win',false);ov('#pause',false);show('game');
+ lvSpecial(l);render();tipUpd();cg('gameplayStart');tutCheck()}
+function win(){cg('gameplayStop');cg('happytime');sfx('win');
+ const st=assists===0?3:assists<=2?2:1;
+ $('#stars').textContent='★'.repeat(st)+'☆'.repeat(3-st);
+ $('#wm').textContent=moves+' moves'+(st===3?' · no help used':'');
+if(!daily)S.p[S.w]=level+1;S.fu.lv++;winStats(st);save();
+winCount++;
+fusion(()=>{ov('#win',true);confetti()})}
+function menu(){cg('gameplayStop');document.body.classList.remove('boss','night');ov('#win',false);ov('#pause',false);buildMenu();show('menu')}
+function buildMenu(){dlLabel();$('#wl').innerHTML='';
+ WORLDS.forEach(w=>{const b=document.createElement('button');b.className=w.id===S.w?'cur':'';
+  b.innerHTML='<span>'+w.i+'</span>'+w.n+'<small>Lv '+(S.p[w.id]||1)+'</small>';
+  b.onclick=()=>{sfx('click');S.w=w.id;save();startLevel(S.p[w.id]||1)};$('#wl').appendChild(b)})}
+function pause(){if(!$('#game').classList.contains('on')||busy||$('#win').classList.contains('on'))return;cg('gameplayStop');ov('#pause',true)}
+
+/* ===== Emoji Fusion Mode (extension) ===== */
+/* Fusion table: [id, ingredient A, ingredient B, result, name, secret?]. Normal fusions prefer emojis used in the solved level. */
+const FUS=[['f1','😀','😎','🤩','Star Struck'],['f2','😍','🥳','🥰','Party Love'],['f3','🐶','🦊','🐺','Wild Pack'],['f4','🐼','🐨','🧸','Teddy Duo'],
+ ['f5','🐣','🐥','🐔','Grown Up'],['f6','🍕','🌮','🌯','Wrap Star'],['f7','🍎','🍏','🍎✨','Golden Apple'],['f8','🍎','🍪','🥧','Apple Pie'],
+ ['f9','⚽','🏀','🏆','Champion'],['f10','🎾','🏓','🏸','Racket Club'],['f11','🌱','🌿','🌳','Tree of Life'],['f12','⭐','🌙','🌌','Night Sky'],
+ ['f13','🌸','🌻','💐','Bouquet'],['f14','🎃','👻','🕸️','Haunted Web'],['f15','🎁','🎄','🎅','Santa Claus'],['f16','⛄','❄️','☃️','Snow Day'],
+ ['s1','🍓','🍉','🍰','Berry Cake',1],['s2','🌈','🍀','🦄','Lucky Unicorn',1],['s3','🏒','🥊','🏅','Gold Medal',1]];
+/* Achievements: [id, title, icon, test(save)] */
+const ACH=[['a1','First Fusion','🌟',F=>F.n>=1],['a2','10 Fusions','🔟',F=>F.n>=10],['a3','25 Fusions','🏅',F=>F.n>=25],
+ ['a4','Unlock Every Fusion','👑',F=>FUS.every(f=>F.u[f[0]])],['a5','Secret Fusion Found','🔮',F=>F.sec>=1]];
+/* Cosmetic rewards, unlocked by lifetime Fusion Points and never spent: [id, slot, title, points needed] */
+const COS=[['gold','tube','Golden tubes',30],['neon','tube','Neon tubes',60],['gem','fx','Gem sparkles',90],['aurora','bg','Animated background',150]];
+/* Sound aliases: reuses existing sounds. Point these at new fusion/unlock/sparkle files if you add them. */
+const FXS={fusion:'pow',sparkle:'drop',unlock:'win'};
+let fcG=false;
+
+/** Number of discovered fusions. */
+const fuCount=()=>FUS.filter(f=>S.fu.u[f[0]]).length;
+/** Refresh the HUD points and the menu "x/y" counter. */
+function fuLabels(){shLabels();$('#fp').textContent=S.fu.pts;$('#fcn').textContent=fuCount()+'/'+FUS.length}
+/** Apply equipped cosmetics (tube skin, animated background) via body classes. */
+function fuSkin(){const e=S.fu.eq,b=document.body;b.classList.remove('tk-gold','tk-neon','bg-aurora');if(e.tube)b.classList.add('tk-'+e.tube);if(e.bg)b.classList.add('bg-'+e.bg)}
+/** Initialise labels and cosmetics on load. */
+function fuInit(){fuLabels();fuSkin();shApply()}
+/** Choose the fusion for a solved level: 10% chance of a secret one, otherwise one matching the level's emojis (undiscovered first). */
+function pickFusion(){const sec=Math.random()<.1,pool=FUS.filter(f=>!!f[5]===sec),c=sec?pool:pool.filter(f=>emo.includes(f[1])&&emo.includes(f[2]));
+ let n=c.filter(f=>!S.fu.u[f[0]]);if(!n.length)n=pool.filter(f=>!S.fu.u[f[0]]);
+ const l=n.length?n:(c.length?c:pool);return{f:l[Math.floor(Math.random()*l.length)],sec}}
+/** Mark newly earned achievements and return them. */
+function fuAch(){const F=S.fu;return ACH.filter(a=>!F.ach[a[0]]&&a[3](F)).map(a=>(F.ach[a[0]]=Date.now(),a))}
+/** Slide-in achievement popup. */
+function toast(a){const t=$('#toast');t.innerHTML='🏆 Achievement unlocked<br><b>'+a[2]+' '+a[1]+'</b>';t.classList.add('on');sfx(FXS.unlock);setTimeout(()=>t.classList.remove('on'),2400)}
+/** Spawn n particles (CSS-animated, self-removing). Rainbow for secret fusions, gem palette if equipped. */
+function burst(n,sec){const box=$('#fpt'),F=S.fu;
+ for(let i=0;i<n;i++){const p=document.createElement('i'),a=Math.random()*6.283,d=60+Math.random()*160;
+  p.className='pt';p.style.setProperty('--x',Math.round(Math.cos(a)*d)+'px');p.style.setProperty('--y',Math.round(Math.sin(a)*d)+'px');
+  if(i%4===0)p.textContent='✨';else p.style.background='hsl('+(sec?i*360/n:F.eq.fx==='gem'?[170,290,50][i%3]:(W().h+i*13)%360)+' 90% 65%)';
+  p.onanimationend=()=>p.remove();box.appendChild(p)}}
+/** Reward animation shown after a solved level; saves progress, then calls done() (the normal level-complete screen). Never touches puzzle state. */
+function fusion(done){const{f,sec}=pickFusion(),F=S.fu,first=!F.u[f[0]];
+ if(first){F.u[f[0]]=Date.now();F.rec=f[0]}
+ S.sh.c+=15;F.n++;if(sec)F.sec++;
+ const got=fuAch();save();fuLabels();
+ const fx=$('#fx'),g=$('#game'),T=[],at=(ms,fn)=>T.push(setTimeout(fn,ms));
+ $('#fa').textContent=f[1];$('#fb').textContent=f[2];$('#fr').textContent=f[3];
+ $('#ft').textContent=sec?'Secret Fusion!':first?'Fusion Unlocked!':'Fusion!';$('#ft').className=sec?'rb':'';
+ $('#fn').textContent=f[1]+' + '+f[2]+' = '+f[3]+' · '+f[4];
+ $('#fq').textContent='💰 +15 coins'+(first?' · added to your collection':'');
+ fx.dataset.st='1';fx.classList.add('on');$('#tubes').classList.add('fusing');sfx(FXS.fusion);
+ const end=()=>{T.forEach(clearTimeout);fx.onclick=null;fx.classList.remove('on');$('#fpt').innerHTML='';$('#tubes').classList.remove('fusing');g.classList.remove('cam');
+  got.forEach((a,i)=>setTimeout(()=>toast(a),500+i*2700));done()};
+ at(900,()=>{fx.dataset.st='2';g.classList.add('cam');burst(36,sec);sfx(FXS.sparkle)});
+ at(1400,()=>{fx.onclick=end});
+ at(1800,()=>{burst(18,sec);sfx(FXS.sparkle)});
+ at(3300,end)}
+/** Build and show the Fusion Collection overlay (cards, achievements, rewards, stats). */
+function fuShow(){const F=S.fu,rec=FUS.find(f=>f[0]===F.rec);
+ $('#fcs').innerHTML='Unlocked: <b>'+fuCount()+' / '+FUS.length+'</b>'+(rec?'<br>Latest: '+rec[1]+' + '+rec[2]+' = '+rec[3]:'')+'<br><small class="sub">Fusions '+F.n+' · Secrets '+F.sec+' · Levels '+F.lv+'</small>';
+ $('#fcg').innerHTML=FUS.map(f=>F.u[f[0]]?'<div class="fcd on'+(f[5]?' sc':'')+'"><span class="eq">'+f[1]+' + '+f[2]+' = '+f[3]+'</span><small>'+f[4]+'</small></div>':'<div class="fcd">❓❓❓<small>'+(f[5]?'Secret':'Locked')+'</small></div>').join('');
+ $('#fca').innerHTML=ACH.map(a=>'<div class="ac'+(F.ach[a[0]]?' on':'')+'">'+(F.ach[a[0]]?a[2]:'🔒')+' '+a[1]+'</div>').join('');
+ $('#fcr').innerHTML='<button>🛒 Open Shop</button>'}
+/** Open the collection (pauses SDK gameplay if a level is running). */
+function fuOpen(){fcG=$('#game').classList.contains('on')&&!busy&&!$('#pause').classList.contains('on')&&!$('#win').classList.contains('on');if(fcG)cg('gameplayStop');fuShow();stShow();ov('#fc',true)}
+/** Close the collection and resume gameplay tracking if needed. */
+function fuClose(){sfx('click');ov('#fc',false);if(fcG)cg('gameplayStart')}
+$('#fcb').onclick=()=>{sfx('click');fuOpen()};$('#fh').onclick=()=>{sfx('click');fuOpen()};$('#fcx').onclick=fuClose;
+/* Equip or unequip a cosmetic (event delegation, one listener). */
+$('#fcr').onclick=e=>{if(e.target.closest('button')){fuClose();shOpen()}};
+
+/* ===== Special emoji mechanics (extension) ===== */
+/* State: sp=specials in this level, lk[i]={p,k,c} locked ball (position,kind,taps) per tube, gh=ghost uses left, brk=balls to thaw-animate. */
+let sp=[],lk=[],gh=0,brk=[],chl='',boss=false,daily=false,dw='faces',seedX=0,t0=0;
+/* Idle "personality" animation classes by emoji. */
+const PERS={'😀':'p-smile','😡':'p-ang','😴':'p-zz','👻':'p-fl','🥶':'p-sh','😍':'p-ht','💣':'p-ht'};
+/* Extra sound aliases (existing files). */
+FXS.crack='pow';FXS.boom='bad';
+/** True on boss levels (every 10th, never in the daily). */
+const isBoss=l=>!daily&&l>=10&&l%10===0;
+/** True if the top ball of tube i is frozen or asleep. */
+const lked=i=>!!(lk[i]&&tubes[i]&&lk[i].p===tubes[i].length-1);
+/** Number of completed (full, single-kind) tubes. */
+const doneN=()=>tubes.filter(T=>T.length===CAP&&T.every(x=>x===T[0])).length;
+/** Extra CSS classes for a ball: personality, lock state, thaw flash. */
+function bcls(i,j,b){let c=PERS[emo[b]]?' '+PERS[emo[b]]:'';const L=lk[i];if(L&&L.p===j)c+=(L.k==='ice'?' ice':' lz')+(L.c?' cr':'');if(brk.includes(i+':'+j))c+=' thaw';return c}
+/** Save an undo snapshot including lock and ghost state. */
+function snap(){const s=tubes.map(t=>t.slice());s.lk=JSON.stringify(lk);s.gh=gh;hist.push(s)}
+/** Centre of tube i on screen. */
+function tpos(i){const e=$('#tubes').children[i],r=e?e.getBoundingClientRect():{left:innerWidth/2,top:innerHeight/2,width:0,height:0};return[r.left+r.width/2,r.top+r.height/2]}
+/** Burst of particles (colored dots, or ch) at screen position, reusing the fusion particle style. */
+function spark(x,y,n,ch){const b=$('#cf');for(let i=0;i<n;i++){const p=document.createElement('i'),a=Math.random()*6.283,d=50+Math.random()*130;p.className='pt';p.style.left=x+'px';p.style.top=y+'px';p.style.setProperty('--x',Math.round(Math.cos(a)*d)+'px');p.style.setProperty('--y',Math.round(Math.sin(a)*d+30)+'px');if(ch)p.textContent=ch;else p.style.background='hsl('+Math.floor(Math.random()*360)+' 90% 62%)';p.onanimationend=()=>p.remove();b.appendChild(p)}}
+/** Short camera shake. */
+function shakeCam(){const g=$('#game');g.classList.add('cam');setTimeout(()=>g.classList.remove('cam'),900)}
+/** Seeded setup of special emojis, boss and challenge flags for a level (specials from level 15; 2 from 30; 3 from 45). */
+function lvSpecial(l){const r=rng(l*53+seedX+7),n0=l<15?0:l<30?1:l<45?2:3;boss=isBoss(l);const n=boss&&l>=20?Math.max(2,n0):n0;
+ sp=[];lk=tubes.map(()=>null);gh=0;brk=[];chl='';t0=Date.now();S.st.gp++;$('#cf').innerHTML='';
+ const K=['ice','sleep','bomb','ghost'],used=[];for(let i=3;i>0;i--){const j=Math.floor(r()*(i+1));[K[i],K[j]]=[K[j],K[i]]}
+ K.slice(0,n).forEach(k=>{
+  if(k==='bomb'||k==='ghost'){const g=k==='bomb'?'💣':'👻';let t=emo.indexOf(g);if(t<0){const f=emo.map((_,i)=>i).filter(i=>!used.includes(i));t=f[Math.floor(r()*f.length)];emo[t]=g}used.push(t);sp.push(k);if(k==='ghost')gh=3}
+  else{const c=tubes.map((_,i)=>i).filter(i=>tubes[i].length>=2&&!lk[i]);if(c.length){const i=c[Math.floor(r()*c.length)];lk[i]={p:tubes[i].length-1,k,c:0};sp.push(k)}}});
+ if(!boss&&l>=11&&l%6===5)chl=['noundo','nohint','night'][Math.floor(r()*3)];
+ document.body.classList.toggle('boss',boss);document.body.classList.toggle('night',chl==='night');
+ if(daily)$('#lv').textContent='📅 Daily Challenge';else if(boss)$('#lv').textContent='👑 BOSS · '+l}
+/** Tip-bar text describing the boss, challenge and special mechanics of this level. */
+function spTip(){const t=[];if(boss)t.push('👑 Boss level');if(chl)t.push({noundo:'No Undo',nohint:'No Hint',night:'Night mode'}[chl]);
+ const D={ice:'🧊 Frozen',sleep:'😴 Sleeping',bomb:'💣 Bomb',ghost:'👻 Ghost ×'+gh};
+ sp.forEach(k=>t.push(D[k]));return t.slice(0,3).join(' · ')}
+/** Thaw/wake the locked ball in tube i with shards and a sound. */
+function thaw(i){const L=lk[i];if(!L)return;brk.push(i+':'+L.p);const[x,y]=tpos(i);spark(x,y,8,L.k==='ice'?'❄️':'💤');spark(x,y,6);sfx(FXS.crack);lk[i]=null}
+/** Tapping a locked tube: second tap breaks the ice / wakes the sleeper. */
+function icetap(i){lk[i].c++;bad=i;sfx(FXS.crack);if(lk[i].c>1)thaw(i);render()}
+/** Bomb tube completed: bombs vanish (a free tube), nearby tubes swap two top emojis, with particles and camera shake. */
+function explode(b){const[x,y]=tpos(b);tubes[b]=[];
+ const n=[b-1,b+1,b-2,b+2].filter(i=>tubes[i]&&tubes[i].length&&!lked(i)&&!(tubes[i].length===CAP&&tubes[i].every(v=>v===tubes[i][0])));
+ if(n.length>1){const A=tubes[n[0]],B=tubes[n[1]],t=A.pop();A.push(B.pop());B.push(t)}
+ spark(x,y,14);spark(x,y,6,'💥');shakeCam();sfx(FXS.boom)}
+/** After a pour: any newly completed tube thaws every lock; a completed bomb tube explodes. */
+function after(b,d0){if(doneN()>d0)lk.forEach((L,i)=>L&&thaw(i));const T=tubes[b];if(T.length===CAP&&T.every(x=>x===T[0])&&emo[T[0]]==='💣')explode(b)}
+
+/* ===== Win screen, stats, daily challenge ===== */
+/** UTC date key (YYYYMMDD) so everyone gets the same daily puzzle. */
+const dKey=()=>{const d=new Date();return d.getUTCFullYear()*10000+(d.getUTCMonth()+1)*100+d.getUTCDate()};
+/** Update statistics, best moves, combo, score and daily bests; fill the win card. */
+function winStats(st){const s=S.st,el=Date.now()-t0,perf=assists===0;
+ s.lc++;s.mv+=moves;s.tm+=el;s.su+=sp.length;if(boss)s.bd++;if(perf){s.pl++;S.cb++}else S.cb=0;
+ const k=S.w+':'+level,best=daily?0:(S.bm[k]=Math.min(S.bm[k]||1e9,moves)),combo=S.cb,sc=Math.max(100,2000-moves*20)+(perf?500:0)+combo*100;let ex='';const cn=10+st*5+(perf?10:0)+(boss?50:0)+(daily?30:0);S.sh.c+=cn;shLabels();
+ if(daily){const d=S.dy;if(!d.t||el<d.t)d.t=el;if(!d.m||moves<d.m)d.m=moves;d.s=Math.max(d.s,st);d.sc=Math.max(d.sc,sc);d.k=dKey();d.done=1;ex='<br>Daily best score '+d.sc}
+ $('#wm').innerHTML=moves+' moves'+(daily?'':' · best '+best)+' · '+Math.round(el/1000)+'s'+(perf?'<br>⭐ Perfect bonus +500':'')+(combo>1?'<br>🔥 Combo ×'+combo+' (+'+combo*100+')':'')+'<br><b>Score '+sc+'</b>'+ex+'<br>💰 +'+cn+' coins';
+ const t=$('#win .card div');t.textContent=boss?'🏆':'🎉';t.style.fontSize=boss?'76px':'46px'}
+/** Win celebration: camera zoom, fireworks, star burst and falling confetti. */
+function confetti(){const w=innerWidth,h=innerHeight;shakeCam();
+ [[.25,.3],[.75,.25],[.5,.42]].forEach((p,i)=>setTimeout(()=>{spark(w*p[0],h*p[1],18);spark(w*p[0],h*p[1],5,'⭐')},i*260));fall(['🎊','🎉','✨'],boss?26:16,'#cf')}
+/** Fill the statistics block of the collection overlay. */
+function stShow(){const s=S.st,d=S.dy,a=s.lc||1;
+ $('#fst').innerHTML='<b>Statistics</b><br>Games '+s.gp+' · Levels '+s.lc+' · Perfect '+s.pl+'<br>Avg moves '+(s.lc?Math.round(s.mv/a):0)+' · Avg time '+(s.lc?Math.round(s.tm/a/1000)+'s':'-')+'<br>Fusions '+S.fu.n+' · Bosses '+s.bd+' · Specials used '+s.su+'<br><b>Daily best</b> '+(d.t?Math.round(d.t/1000)+'s':'-')+' · '+(d.m||'-')+' moves · '+'★'.repeat(d.s)+' · score '+d.sc}
+/** Show a ✅ on the menu button once today's daily is done. */
+function dlLabel(){$('#dln').textContent=S.dy.k===dKey()&&S.dy.done?'✅':''}
+/** Start today's daily puzzle: same seed for everyone, world picked by date. */
+function startDaily(){const k=dKey();sfx('click');dw=WORLDS[k%7].id;startLevel(16+k%24,k)}
+
+/* ===== Ambient visual events (no gameplay effect) ===== */
+/** Falling emoji particles (snow, leaves, confetti); self-removing. */
+function fall(ch,n,box){const b=$(box||'#ev');for(let i=0;i<n;i++){const p=document.createElement('i');p.className='ev';p.textContent=ch[i%ch.length];p.style.left=Math.random()*100+'vw';p.style.fontStyle='normal';p.style.setProperty('--dx',(Math.random()*20-10)+'vw');p.style.animationDuration=(4+Math.random()*4)+'s';p.style.animationDelay=Math.random()*1.2+'s';p.onanimationend=()=>p.remove();b.appendChild(p)}}
+/** One big fading emoji or a flash/meteor element. */
+function oneEv(cls,ch){const p=document.createElement('i');p.className='ev '+cls;p.textContent=ch||'';p.style.fontStyle='normal';p.onanimationend=()=>p.remove();$('#ev').appendChild(p)}
+/** Every ~20s on the game screen, play one world-appropriate visual event. */
+function ambient(){if(!$('#game').classList.contains('on')||document.hidden||busy||$('#ev').children.length>20)return;
+ const E={christmas:[()=>oneEv('mt','☄️')],nature:[()=>fall(['🍃','🍂'],12)],halloween:[()=>oneEv('big','🌫️'),()=>oneEv('lt')]}[S.w]||[()=>oneEv('mt','☄️'),()=>oneEv('lt')];
+ E[Math.floor(Math.random()*E.length)]()}
+$('#dlb').onclick=startDaily;
+
+/* ===== Coins and Shop (extension) ===== */
+/* Shop items: [id, slot, name, price, swatch]. Coins are the only currency. */
+const SHOP=[['sunset','bg','Sunset',100,'linear-gradient(#ff7e5f,#6a1b9a)'],['ocean','bg','Ocean',150,'linear-gradient(#1ea7e8,#0a2a6a)'],
+ ['forest','bg','Forest',150,'linear-gradient(#3f9a2a,#0f4a35)'],['galaxy','bg','Galaxy',250,'radial-gradient(#4b2bb5,#05030f)'],
+ ['candy','bg','Candy',300,'linear-gradient(#ff9ad5,#9b6bff)'],['lava','bg','Lava',400,'linear-gradient(#ff5a1f,#2b0a0a)'],
+ ['crystal','tube','Crystal tubes',120,'#9ff'],['wood','tube','Wooden tubes',200,'#c58b4b'],['rainbow','tube','Rainbow glow tubes',350,'linear-gradient(90deg,#ff7ad9,#7affd9)']];
+let shG=false;
+/** Refresh the coin counters (HUD, menu, shop). */
+function shLabels(){const c=S.sh.c;$('#cn').textContent=c;$('#shc').textContent='💰 '+c;$('#shn').textContent=c}
+/** Apply equipped shop items as body classes (background sb-*, tube skin ts-*). */
+function shApply(){const b=document.body,e=S.sh.eq;SHOP.forEach(x=>b.classList.remove((x[1]==='bg'?'sb-':'ts-')+x[0]));if(e.bg)b.classList.add('sb-'+e.bg);if(e.tube)b.classList.add('ts-'+e.tube)}
+/** Render the shop lists: swatch, name, and price / Equip / Equipped. */
+function shShow(){const H=S.sh;shLabels();
+ const row=x=>{const o=H.own[x[0]],e=H.eq[x[1]]===x[0];return'<button class="shi'+(e?' eqp':'')+'" data-id="'+x[0]+'"'+(!o&&H.c<x[3]?' disabled':'')+'><i style="background:'+x[4]+'"></i><span>'+x[2]+'</span><b>'+(o?(e?'✅ Equipped':'Equip'):'💰 '+x[3])+'</b></button>'};
+ $('#sbg').innerHTML=SHOP.filter(x=>x[1]==='bg').map(row).join('');$('#stb').innerHTML=SHOP.filter(x=>x[1]==='tube').map(row).join('')}
+/** Open the shop (pauses SDK gameplay tracking if a level is running). */
+function shOpen(){sfx('click');shG=$('#game').classList.contains('on')&&!busy&&!$('#pause').classList.contains('on')&&!$('#win').classList.contains('on');if(shG)cg('gameplayStop');shShow();ov('#sh',true)}
+/** Close the shop. */
+function shClose(){sfx('click');ov('#sh',false);if(shG)cg('gameplayStart')}
+/* Buy, equip or unequip (one delegated listener). */
+$('#sh').onclick=e=>{const b=e.target.closest('.shi');if(!b||b.disabled)return;const x=SHOP.find(i=>i[0]===b.dataset.id),H=S.sh;
+ if(!H.own[x[0]]){if(H.c<x[3])return sfx('bad');H.c-=x[3];H.own[x[0]]=1;H.eq[x[1]]=x[0];sfx('win')}
+ else{H.eq[x[1]]=H.eq[x[1]]===x[0]?'':x[0];sfx('click')}
+ save();shApply();shShow()};
+$('#shb').onclick=shOpen;$('#sb').onclick=shOpen;$('#wshop').onclick=shOpen;$('#shx').onclick=shClose;
+
+/* ===== Animated tutorial (replaces tip-bar hints) ===== */
+/* Animated scenes (pure CSS) for each basic tutorial step. */
+const SCN={
+ goal:'<div class="mt gl"><b>😀</b><b>😀</b><b>😀</b><b>😀</b></div><div class="mt gl" style="animation-delay:.3s"><b>🐶</b><b>🐶</b><b>🐶</b><b>🐶</b></div><div class="mt gl" style="animation-delay:.6s"><b>🍕</b><b>🍕</b><b>🍕</b><b>🍕</b></div>',
+ pick:'<div class="mt up"><b>🐶</b><b>😀</b><b>😎</b></div><div class="mt"><b>🐱</b></div><i class="hand" style="left:78px">👆</i>',
+ pour:'<div class="mt"><b>🐶</b><b>😀</b></div><div class="mt rc"><b>🐱</b><b>😎</b></div><i class="fly" style="left:80px;top:46px">😎</i>',
+ power:'<span class="pb">↩️</span><span class="pb" style="animation-delay:.5s">💡</span><span class="pb" style="animation-delay:1s">➕</span><span class="pb" style="animation-delay:1.5s">🔄</span>',
+ coins:'<span class="pb" style="animation:bob 2s infinite">💰</span><span class="pb" style="animation:bob 2s .4s infinite">✨</span><span class="pb" style="animation:bob 2s .8s infinite">🛒</span>'};
+/* Basic tutorial steps. */
+const TUT=[{s:'goal',t:'Welcome to Emoji Sort!',d:'Pour the emojis around until every tube holds just one kind.'},
+ {s:'pick',t:'1. Pick up',d:'Tap a tube to lift its top emoji.'},
+ {s:'pour',t:'2. Pour',d:'Tap another tube. Emojis only stack on the same kind, or go into an empty tube.'},
+ {s:'power',t:'Need help?',d:'↩️ Undo a move, 💡 get a Hint, ➕ add a Tube, 🔄 Restart the level.'},
+ {s:'coins',t:'Rewards',d:'Finish levels to earn 💰 coins and discover ✨ fusions. Spend coins in the 🛒 Shop.'}];
+/* One-card intros shown the first time each special emoji appears. */
+const TSP={ice:{ic:'🧊',t:'Frozen emoji',d:"It can't move or receive. Tap its tube twice, or finish any tube, to break the ice."},
+ sleep:{ic:'😴',t:'Sleepy emoji',d:'Tap its tube twice, or finish any tube, to wake it up.'},
+ bomb:{ic:'💣',t:'Bomb emoji',d:'Sort all the bombs into one tube to blow them up and free that tube.'},
+ ghost:{ic:'👻',t:'Ghost emoji',d:'The ghost can be poured onto any emoji, 3 times per level.'}};
+/** True while a level is actively being played (not paused, no overlay). */
+const live=()=>$('#game').classList.contains('on')&&!$('#pause').classList.contains('on')&&!$('#win').classList.contains('on');
+/** Animated step-by-step tutorial: Next advances, Skip closes; done() runs afterwards. */
+function tutorial(steps,done){let i=0;const o=$('#tu'),L=steps.length-1,
+ draw=()=>{const x=steps[i];$('#tus').innerHTML=x.ic?'<span class="tuic">'+x.ic+'</span>':SCN[x.s];$('#tut').textContent=x.t;$('#tud').textContent=x.d;
+  $('#tup').innerHTML=steps.map((_,j)=>'<i'+(j===i?' class="on"':'')+'></i>').join('');$('#tun').textContent=i<L?'Next ▶':"Let's play!";$('#tuk').style.visibility=i<L?'visible':'hidden'},
+ end=()=>{o.classList.remove('on');$('#tun').onclick=$('#tuk').onclick=null;if(live())cg('gameplayStart');done&&done()};
+ $('#tun').onclick=()=>{sfx('click');if(i<L){i++;draw()}else end()};$('#tuk').onclick=()=>{sfx('click');end()};
+ if(live())cg('gameplayStop');draw();o.classList.add('on')}
+/** After a level starts: basic tutorial on first play, plus a card for each special emoji seen for the first time. */
+function tutCheck(){const st=[];if(!S.tu.basic){S.tu.basic=1;st.push(...TUT)}sp.forEach(k=>{if(!S.tu[k]){S.tu[k]=1;st.push(TSP[k])}});if(st.length){save();tutorial(st)}}
+$('#htb').onclick=()=>{sfx('click');tutorial(TUT)};$('#pht').onclick=()=>{sfx('click');tutorial(TUT)};
+
+$('#play').onclick=()=>{sfx('click');startLevel(S.p[S.w]||1)};
+$('#back').onclick=()=>{sfx('click');menu()};
+$('#pz').onclick=()=>{sfx('click');pause()};
+$('#resume').onclick=()=>{sfx('click');ov('#pause',false);cg('gameplayStart')};
+$('#prest').onclick=()=>{sfx('click');startLevel(level,daily?seedX:0)};
+$('#pmenu').onclick=()=>{sfx('click');menu()};
+$('#wmenu').onclick=()=>{sfx('click');menu()};
+$('#next').onclick=()=>{
+const AD_EVERY=3;let adPending=0;
+const adSafe=(p,ms=8000)=>Promise.race([Promise.resolve(p).catch(()=>({success:false})),new Promise(r=>setTimeout(()=>r({success:false}),ms))]);
+$('#next').onclick=()=>{
+  sfx('click');ov('#win',false);
+  const go=()=>{if(daily)menu();else startLevel(level+1)};
+  if(++adPending<AD_EVERY){go();return}
+  adPending=0;
+  adSafe(ADS.interstitial()).then(go);
+};
+};
+$$('[data-p]').forEach(b=>b.onclick=()=>power(b.dataset.p));
+$$('[data-m]').forEach(b=>b.onclick=()=>{S.mute=!S.mute;save();muteUI();sfx('click')});
+window.addEventListener('resize',()=>{if(tubes.length)layout()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
+/* ===== PLUS MODULE: evolution, combos, lucky wheel, encyclopedia, story worlds, boss attacks, polish.
+   Uses its own save key 'emojisort.plus'; the original save is never altered. ===== */
+const P=(()=>{let o={};try{o=JSON.parse(localStorage.getItem('emojisort.plus')||'{}')}catch(e){}return Object.assign({fam:{},fd:{},es:{},ev:[],sec:{},bg:{},seen:{},cmb:0,lt:0,dc:0,wh:0,nh:0,fast:0},o)})();
+['fam','fd','es','sec','bg','seen'].forEach(k=>{if(!P[k]||typeof P[k]!=='object')P[k]={}});if(!Array.isArray(P.ev))P.ev=[];
+const asave=()=>{save();const a=JSON.stringify(P);try{localStorage.setItem('emojisort.plus',a)}catch(e){}try{sdk().data.setItem('emojisort.plus',a);sdk().data.setItem('emojisort.v2',JSON.stringify(S))}catch(e){}};
+const css=document.createElement('style');css.textContent=`body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#ld{position:fixed;inset:0;z-index:99;background:#12122b;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font:700 22px system-ui;transition:opacity .5s}#ld.off{opacity:0;pointer-events:none}#ld b{font-size:64px;animation:pbob 1s infinite}
+@keyframes pbob{50%{transform:translateY(-10px)}}
+.pf{position:fixed;left:50%;top:38%;z-index:60;pointer-events:none;font:900 26px system-ui;color:#fff;text-shadow:0 2px 8px #000a;opacity:0;white-space:nowrap}.pf.go{animation:pfl 1.6s ease-out}
+@keyframes pfl{0%{opacity:0;transform:translate(-50%,20px) scale(.6)}15%{opacity:1;transform:translate(-50%,0) scale(1.2)}100%{opacity:0;transform:translate(-50%,-90px) scale(1)}}
+#cm{position:fixed;left:50%;top:calc(58px + env(safe-area-inset-top));transform:translateX(-50%);z-index:55;pointer-events:none;color:#fff;font:900 15px system-ui;text-align:center;opacity:0;transition:opacity .3s;min-width:90px}#cm.on{opacity:1}#cm i{display:block;height:5px;margin-top:3px;border-radius:3px;background:#ffd23f;transform-origin:left}
+@keyframes cmb{to{transform:scaleX(0)}}
+#evo,#tr{position:fixed;z-index:62;pointer-events:none;color:#fff;text-align:center;opacity:0}#evo.on,#tr.on{animation:evi 3s}@keyframes evi{0%,100%{opacity:0}10%,85%{opacity:1}}
+#evo{left:50%;top:22%;transform:translateX(-50%);background:#000b;border-radius:18px;padding:12px 20px}#evo b{font-size:44px}#evo b.g{animation:pbob .5s 4}#evo small{display:block;font-weight:700}
+#tr{inset:0;z-index:70;background:#0b0b22;display:flex;flex-direction:column;align-items:center;justify-content:center;font:800 24px system-ui}#tr.on{animation:evi 2s}#tr b{font-size:90px;animation:pbob .6s 3}
+.p-cry{animation:pcr 1.6s infinite}.p-party{animation:ppa 1s infinite}.p-vib{animation:pvb .15s infinite}.rx{animation:ppa .5s 1}
+@keyframes pcr{50%{transform:rotate(-8deg) translateY(2px)}}@keyframes ppa{50%{transform:translateY(-6px) scale(1.12)}}@keyframes pvb{50%{transform:translateX(1.5px)}}
+.g-fc #fh{display:none}.g-fc #fcb,.g-dl #dlb,.g-dl #whb,.g-en #enb{opacity:.5}.g-fc #fcb::after,.g-dl #dlb::after,.g-dl #whb::after,.g-en #enb::after{content:' 🔒'}#sh .card{max-height:90vh;overflow-y:auto}#wl button.lkw{opacity:.5}
+.pg{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:6px;width:100%}.pg b{font-size:28px;cursor:pointer;opacity:.3}.pg b.on{opacity:1}
+.pr{width:100%;height:8px;background:#0003;border-radius:4px;overflow:hidden}.pr i{display:block;height:100%;background:#ffd23f}
+#wh{position:relative;width:200px;height:200px;border-radius:50%;margin:6px auto;border:4px solid #fff;transition:transform 3.2s cubic-bezier(.1,.7,.1,1)}#wh span{position:absolute;left:50%;top:50%;font-size:26px;margin:-15px}`;document.head.appendChild(css);
+const rs=(el,c)=>{el.classList.remove(c);void el.offsetWidth;el.classList.add(c)};
+const mk=(t,id,h)=>{const e=document.createElement(t);if(id)e.id=id;if(h)e.innerHTML=h;document.body.appendChild(e);return e};
+const maxLv=()=>Math.max(1,...Object.values(S.p).map(Number).filter(Number.isFinite));
+const ld=mk('div','ld','<b>😀</b>Loading…');cg('loadingStart');
+const PF=[0,1,2,3].map(()=>{const e=mk('div');e.className='pf';return e});let pfi=0;
+const floatTxt=t=>{const e=PF[pfi++%4];e.textContent=t;rs(e,'go')};
+const cm=mk('div','cm','<span></span><i></i>'),evEl=mk('div','evo'),tr=mk('div','tr');
+
+/* ---- Story worlds (new worlds are additive; old progress keys untouched) ---- */
+WORLDS.push({id:'space',n:'Space Station',i:'🚀',h:215,e:['🚀','🛰️','👽','🌍','🪐','🌙','⭐','🛸','☄️','🌠']},
+ {id:'candy',n:'Candy Kingdom',i:'🍬',h:320,e:['🍬','🍭','🍫','🍩','🧁','🍪','🍦','🍰','🍮','🍯']},
+ {id:'robot',n:'Robot Factory',i:'🤖',h:190,e:['🤖','⚙️','🔧','🔩','💾','🔋','📡','🧲','💡','🖥️']},
+ {id:'galaxy',n:'Galaxy',i:'🌌',h:265,e:['🌌','🌀','💫','🌟','🔮','👾','🧿','💎','🌠','🪐']});
+const STORY=[['faces','🏠','Emoji Village'],['nature','🌳','Forest'],['halloween','🏰','Haunted Castle'],['christmas','🎄','Christmas Town'],['space','🚀','Space Station'],['candy','🍬','Candy Kingdom'],['robot','🤖','Robot Factory'],['galaxy','🌌','Galaxy']];
+const ORDER=STORY.map(s=>s[0]).concat(['animals','food','sports']);
+const unl=k=>k===0||k>=8||(S.p[ORDER[k]]||1)>1||(S.p[ORDER[k-1]]||1)>10;
+function trans(id){const k=STORY.findIndex(s=>s[0]===id),w=WORLDS.find(x=>x.id===id),s=STORY[k]||[id,w.i,w.n];tr.innerHTML=(k>0?'<small>'+STORY[k-1][1]+' ➜</small>':'')+'<b>'+s[1]+'</b>'+s[2];rs(tr,'on');sfx('win')}
+/* Progressive unlocks by highest level reached (old saves with progress unlock instantly). */
+const GATE=[['fc',21],['dl',41],['en',61]];
+const gate=()=>{const m=maxLv();GATE.forEach(g=>document.body.classList.toggle('g-'+g[0],m<g[1]))};
+document.addEventListener('click',e=>{const b=e.target.closest('#fcb,#dlb,#whb,#enb');if(!b)return;const k=b.id==='fcb'?'fc':b.id==='enb'?'en':'dl';if(document.body.classList.contains('g-'+k)){e.stopImmediatePropagation();e.preventDefault();sfx('bad');floatTxt('🔒 Unlocks at level '+GATE.find(x=>x[0]===k)[1])}},true);
+buildMenu=()=>{dlLabel();const L=$('#wl');L.innerHTML='';
+ ORDER.forEach((id,k)=>{const w=WORLDS.find(x=>x.id===id),s=STORY[k],ul=unl(k),b=document.createElement('button');
+  b.className=(id===S.w?'cur':'')+(ul?'':' lkw');b.innerHTML='<span>'+(s?s[1]:w.i)+'</span>'+(s?s[2]:w.n)+'<small>'+(ul?'Lv '+(S.p[id]||1):'🔒')+'</small>';
+  b.onclick=()=>{if(!ul){sfx('bad');return floatTxt('🔒 Reach level 10 in '+STORY[k-1][2])}sfx('click');S.w=id;save();startLevel(S.p[id]||1)};L.appendChild(b)});
+ $('#whn').textContent=P.wh===dKey()?'':'🆓';gate()};
+let bk=0;const _sl=startLevel;startLevel=(l,d)=>{bk=0;if(!d&&!P.seen[S.w]){P.seen[S.w]=1;trans(S.w)}_sl(l,d)};
+
+/* ---- Evolution chains (cosmetic only) ---- */
+const EVO=[{c:['🐣','🐥','🐔'],s:['🐱','🐶','🦁','🐼','🐸','🐵','🐯','🐰','🦊','🐨']},{c:['🌱','🌿','🌳'],s:['🌳','🌸','🌵','🍄','🌻','🍀']},
+ {c:['⭐','🌟','✨'],s:['⭐','🌙','🎄','🌈']},{c:['🍎','🍏','🍎✨'],s:['🍎','🍉','🍓','🍕','🍩']}];
+function evo(i,st){const c=EVO[i].c,to=c[Math.min(st,2)];evEl.innerHTML='<b>'+c[Math.min(st-1,2)]+'</b> ➜ <b class="g">'+to+(st>2?'✨':'')+'</b><small>'+(st>2?'Golden ':'')+'Evolution!</small>';rs(evEl,'on');sfx('win');spark(innerWidth/2,innerHeight*.28,16,to)}
+/* ---- Secret collectibles: [id, emoji, name, rarity, condition, test] ---- */
+const SEC=[['gold','😀','Golden 😀','Rare','10 perfect levels',()=>S.st.pl>=10],['rb','👻','Rainbow 👻','Epic','3 boss victories',()=>S.st.bd>=3],['dia','🍎','Diamond 🍎','Legendary','5 daily challenges',()=>P.dc>=5],
+ ['cry','🌳','Crystal 🌳','Epic','10 clears without hints',()=>P.nh>=10],['fire','🎃','Fire 🎃','Mythic','5 speed clears under 30s',()=>P.fast>=5],['uni','🦄','Lucky Unicorn','Rare','Win it on the Lucky Wheel',()=>P.bg.rare]];
+let sq=0;const secChk=()=>SEC.forEach(s=>{if(!P.sec[s[0]]&&s[5]()){P.sec[s[0]]=Date.now();setTimeout(()=>toast(['',s[3]+' collectible: '+s[2],'🔮']),4300+sq++%3*2700)}});
+
+/* ---- Combos, evolution progress, Faces mechanic: hooked after every pour ---- */
+function fin(e,b){const now=Date.now(),c=P.cmb=now-P.lt<6000?P.cmb+1:1;P.lt=now;
+ if(!P.fd[e])P.fd[e]=now;P.fam[e]=(P.fam[e]||0)+1;
+ EVO.forEach((v,i)=>{if(!v.s.includes(e))return;const n=P.fam['c'+i]=(P.fam['c'+i]||0)+1,st=n>=40&&maxLv()>=61?3:n>=15?2:n>=5?1:0;if(st>(P.es[i]||0)){P.es[i]=st;P.ev.push([i,st,now]);evo(i,st)}});
+ const[x,y]=tpos(b);if(P.bg.fx)spark(x,y,6,'💫');
+ if(c>=2){const r=c>=5?150:c>=3?100:50;S.sh.c+=r;shLabels();spark(x,y,10);shakeCam();sfx('pow');floatTxt(c>=5?'🌟 PERFECT COMBO ×'+c+' +'+r+' 💰':'Combo ×'+c+' +'+r+' 💰');
+  if(c>=3)[0,1,2].forEach(k=>setTimeout(()=>{spark(innerWidth*(.25+k*.25),innerHeight*.4,14);spark(innerWidth*(.25+k*.25),innerHeight*.4,3,'🌈')},k*180))}
+ if(S.w==='faces'&&!daily){let n=0;[b-1,b+1].forEach(i=>{if(tubes[i]&&tubes[i].some(v=>emo[v]===e)){n++;const p=tpos(i);spark(p[0],p[1],5,'✨')}});if(n){S.sh.c+=n*2;shLabels()}}
+ cm.firstChild.textContent=c>1?'COMBO ×'+c:'';cm.classList.toggle('on',c>1);const bar=cm.lastChild;bar.style.animation='none';void bar.offsetWidth;bar.style.animation='cmb 6s linear forwards';asave()}
+const _after=after;after=(b,d0)=>{const T=tubes[b],e=T.length===CAP&&T.every(x=>x===T[0])&&doneN()>d0?emo[T[0]]:null;_after(b,d0);if(e)fin(e,b)};
+setInterval(()=>{if(cm.classList.contains('on')&&Date.now()-P.lt>6000)cm.classList.remove('on')},500);
+
+/* ---- Boss Battles 2.0: every 4 pours the boss attacks (pattern depends on the boss) ---- */
+const BP=[['freeze','shuffle'],['sleep','dark','shuffle'],['freeze','dark','sleep','shuffle']];
+const _pour=pour;pour=(a,b)=>{_pour(a,b);if(boss&&!daily&&++bk%4===0)setTimeout(bAtk,350)};
+function bAtk(){if(!live()||solved(tubes))return;const p=BP[(Math.floor(level/10)-1)%3],k=p[((bk/4-1)%p.length)|0],
+ ok=tubes.map((_,i)=>i).filter(i=>tubes[i].length>=2&&!lk[i]&&!(tubes[i].length===CAP&&tubes[i].every(x=>x===tubes[i][0])));
+ if(k==='dark'){document.body.classList.add('night');floatTxt('🌑 Boss darkens the room!');setTimeout(()=>document.body.classList.toggle('night',chl==='night'),5000)}
+ else if(k==='shuffle'){const q=ok.filter(i=>!lked(i));if(q.length>1){const A=tubes[q[0]],B=tubes[q[q.length-1]],t=A.pop();A.push(B.pop());B.push(t);floatTxt('🌀 Boss shuffles the tubes!')}}
+ else if(ok.length){const i=ok[Math.floor(Math.random()*ok.length)];lk[i]={p:tubes[i].length-1,k:k==='sleep'?'sleep':'ice',c:0};floatTxt(k==='sleep'?'😴 Boss puts a tube to sleep!':'🧊 Boss freezes a tube!')}
+ spark(innerWidth/2,innerHeight*.3,10,'👑');sfx('bad');shakeCam();render();tipUpd()}
+const _tu=tipUpd;tipUpd=()=>{_tu();if(boss&&!daily)$('#tip').textContent+=' · ⚡ attack in '+(4-bk%4)};
+
+/* ---- Win: coin rain, perfect/boss/milestone banners, collectibles, boss reward (+100 coins, badge) ---- */
+const _win=win;win=()=>{const el=Date.now()-t0,nh=hintsLeft===3,d=daily,b=boss,l=level;_win();
+ if(d)P.dc++;if(nh)P.nh++;if(el<30000)P.fast++;
+ if(b&&!d){S.sh.c+=100;P.bg['b'+l]=1;shLabels();setTimeout(()=>toast(['','Boss defeated! +100 💰 · badge','👑']),4200)}
+ secChk();gate();asave()};
+const _cf=confetti;confetti=()=>{_cf();fall(['💰'],boss?30:14,'#cf');if(assists===0)floatTxt('⭐ PERFECT! ⭐');if(boss)floatTxt('👑 BOSS DEFEATED!');else if(level%25===0&&!daily)floatTxt('🌍 World milestone!')};
+
+/* ---- Personalities: extra idle animations and random reactions ---- */
+Object.assign(PERS,{'😭':'p-cry','🥳':'p-party','😱':'p-sh','🤖':'p-vib','💣':'p-vib'});
+const RX={'😍':'💖','😴':'💤','🥳':'🎉','😭':'💧','😡':'💢','😀':'😊','👻':'👻'};
+setInterval(()=>{if(!live()||document.hidden)return;const bs=$$('#tubes .b');if(!bs.length)return;const b=bs[Math.floor(Math.random()*bs.length)],c=RX[b.textContent];if(!c)return;const r=b.getBoundingClientRect();spark(r.left+r.width/2,r.top,3,c);b.classList.add('rx');setTimeout(()=>b.classList.remove('rx'),700)},2500);
+/* ---- Extra ambient events (visual only) ---- */
+const _am=ambient;ambient=()=>{_am();if(!live()||document.hidden||Math.random()<.5)return;
+ [()=>fall(['💧'],22),()=>fall(['✨','🟡'],10),()=>[0,1,2].forEach(i=>setTimeout(()=>{const x=innerWidth*(.2+Math.random()*.6),y=innerHeight*(.15+Math.random()*.25);spark(x,y,16);spark(x,y,4,'✨')},i*400))][Math.floor(Math.random()*3)]()};
+
+/* ---- Daily Lucky Wheel (cosmetic rewards only) ---- */
+const WH=[['💰','c',25],['💰','c',50],['💰','c',75],['🖼️','bg'],['🧪','tube'],['✨','fx'],['🦄','rare'],['💰','c',100]];let wr=0;
+mk('div','whl','<div class="card"><h2 style="margin:0">🎡 Daily Lucky Wheel</h2><div>▼</div><div id="wh"></div><p id="whm" class="sub"></p><button class="big" id="whs" style="padding:12px 20px">Spin</button><button id="whx">Close</button></div>').className='ov';
+$('#wh').style.background='conic-gradient('+WH.map((_,i)=>'hsl('+i*45+' 70% '+(i%2?55:45)+'%) '+i*45+'deg '+(i+1)*45+'deg').join(',')+')';
+$('#wh').innerHTML=WH.map((w,i)=>'<span style="transform:rotate('+(i*45+22.5)+'deg) translateY(-72px)">'+w[0]+'</span>').join('');
+$('#whs').onclick=()=>{if(P.wh===dKey())return;P.wh=dKey();const i=Math.floor(Math.random()*8),w=WH[i];asave();$('#whs').disabled=true;sfx('click');wr=Math.ceil(wr/360)*360+2160-i*45-22.5;$('#wh').style.transform='rotate('+wr+'deg)';
+ setTimeout(()=>{let m;if(w[1]==='c'){S.sh.c+=w[2];m='+'+w[2]+' 💰'}else if(w[1]==='rare'){P.bg.rare=1;m='Rare 🦄 Lucky Unicorn added to your Encyclopedia!'}else if(w[1]==='fx'){P.bg.fx=1;m='✨ Spark trail unlocked!'}
+  else{const it=SHOP.find(x=>x[1]===w[1]&&!S.sh.own[x[0]]);if(it){S.sh.own[it[0]]=1;m='Unlocked '+it[2]+'!'}else{S.sh.c+=60;m='+60 💰'}}
+  $('#whm').textContent='🎉 '+m;shLabels();fuLabels();secChk();asave();sfx('win');spark(innerWidth/2,innerHeight/2,24)},3400)};
+
+/* ---- Emoji Encyclopedia ---- */
+const ALL=[...new Set(WORLDS.flatMap(w=>w.e))],NM={'😀':'Sunny Grin','👻':'Boo Boo','🍎':'Apple','🎃':'Jack','🌳':'Old Oak','⭐':'Starry','🦄':'Lucky Unicorn'};
+const DS=['Sorted so often it asks for a day off.','Secretly judges your tube choices.','Would like a bigger tube, please.','Lives for the pour. Dies for the combo.','Insists it is not sorting, it is "organizing".'];
+const rar=e=>EVO.some((v,i)=>v.s.includes(e)&&P.es[i]>=3)?'Epic':EVO.some((v,i)=>v.s.includes(e)&&P.es[i]>=2)?'Rare':'Common';
+mk('div','enc','<div class="card"><button id="enbk" class="bk">← Back to menu</button><h2 style="margin:0">📖 Emoji Encyclopedia</h2><p id="enp"></p><h3>Evolutions</h3><div id="eev" style="width:100%"></div><h3>Collectibles</h3><div id="esc" style="width:100%"></div><h3>Emoji</h3><div id="egr" class="pg"></div><div id="edt" style="width:100%;text-align:center"></div><button class="big" id="enx" style="padding:12px 20px">Close</button></div>').className='ov';
+const dt=t=>new Date(t).toLocaleDateString();
+function encShow(){const f=ALL.filter(e=>P.fam[e]).length;
+ $('#enp').innerHTML='Completion <b>'+Math.round(f*100/ALL.length)+'%</b> ('+f+'/'+ALL.length+') · 👑 Boss badges '+Object.keys(P.bg).filter(k=>/^b\d+$/.test(k)).length+' · Evolutions '+P.ev.length;
+ $('#eev').innerHTML=EVO.map((v,i)=>{const n=P.fam['c'+i]||0,st=P.es[i]||0,nx=[5,15,40,40][st];return'<div style="margin:6px 0">'+v.c[Math.min(st,2)]+(st>2?'✨':'')+' <b>'+v.c.join(' → ')+'</b> · '+(st>2?'Golden':'Stage '+(st+1))+'<div class="pr"><i style="width:'+Math.min(100,n*100/nx)+'%"></i></div><small>'+n+(st<3?' / '+nx:'')+' families sorted'+(st===2&&maxLv()<61?' · golden evolution unlocks at level 61':'')+'</small></div>'}).join('')+'<small>History: '+(P.ev.slice(-3).map(h=>EVO[h[0]].c[Math.min(h[1],2)]+' '+dt(h[2])).join(' · ')||'none yet')+'</small>';
+ $('#esc').innerHTML=SEC.map(s=>'<div>'+(P.sec[s[0]]?s[2]+' <b>'+s[3]+'</b> · '+dt(P.sec[s[0]]):'❓ '+s[3]+' · '+s[4])+'</div>').join('');
+ $('#egr').innerHTML=ALL.map(e=>'<b class="'+(P.fam[e]?'on':'')+'" data-e="'+e+'">'+e+'</b>').join('');$('#edt').innerHTML=''}
+$('#egr').onclick=ev=>{const e=ev.target.dataset.e;if(!e)return;const w=WORLDS.find(x=>x.e.includes(e)),n=P.fam[e]||0,c=EVO.find(v=>v.s.includes(e));
+ $('#edt').innerHTML=n?'<div style="font-size:72px">'+e+'</div><b>'+(NM[e]||w.n+' emoji')+'</b> · '+rar(e)+'<br><small>World: '+w.n+'<br>Chain: '+(c?c.c.join(' → '):'none')+'<br>Discovered '+dt(P.fd[e])+' · sorted '+n+'×<br>'+DS[ALL.indexOf(e)%DS.length]+'</small>':'<div style="font-size:72px">❓</div><small>Complete a tube of this emoji to discover it.</small>'};
+$('#dlb').insertAdjacentHTML('afterend','<button id="whb">🎡 Lucky Wheel <small id="whn"></small></button><button id="enb">📖 Encyclopedia</button>');
+$('#whb').onclick=()=>{sfx('click');const ok=P.wh!==dKey();$('#whs').disabled=!ok;$('#whm').textContent=ok?'One free spin every day. Cosmetic rewards only.':'Already spun today. Come back tomorrow!';ov('#whl',true)};
+$('#whx').onclick=()=>{sfx('click');ov('#whl',false)};$('#enb').onclick=()=>{sfx('click');encShow();ov('#enc',true)};$('#enx').onclick=()=>{sfx('click');ov('#enc',false)};
+
+/* ---- CrazyGames polish: fullscreen, keyboard, pause on blur, autosave/cloud mirror, loading screen ---- */
+const fb=document.createElement('button');fb.textContent='⛶';fb.setAttribute('aria-label','Fullscreen');$('#pz').before(fb);
+const fsc=()=>{try{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}catch(e){}};fb.onclick=fsc;
+addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey)return;const k=e.key.toLowerCase();if(k==='f')fsc();else if(k==='m')$('[data-m]').click();if(!live())return;
+ if(/^[0-9]$/.test(k)){const i=k==='0'?9:+k-1;if(tubes[i])tap(i)}else if(k==='u')power('undo');else if(k==='h')power('hint');else if(k==='r')power('restart');else if(k==='p'||k==='escape')pause()});
+addEventListener('blur',()=>pause());addEventListener('pagehide',asave);document.addEventListener('visibilitychange',()=>{if(document.hidden)asave()});setInterval(asave,30000);
+Promise.race([Promise.all(Object.values(A).map(a=>new Promise(r=>{if(a.readyState>3)return r();a.addEventListener('canplaythrough',r,{once:true});a.addEventListener('error',r,{once:true})}))),new Promise(r=>setTimeout(r,2500))]).then(()=>{
+  ld.classList.add('off');
+  cg('loadingStop');
+  try{
+    if(window.GamePix&&typeof GamePix.gameLoadingFinished==='function')GamePix.gameLoadingFinished();
+  }catch(e){}
+  setTimeout(()=>ld.remove(),700);
+});
+
+/* ===== SHOP EXPANSION: animated-emoji backgrounds + tube skins (data-driven, appended to SHOP; same coins/save format) ===== */
+/* Backgrounds: [id, name, price, motion, emojis, gradient] */
+const BGS=[['sakura','Sakura Breeze 🌸',180,'down',['🌸','🌸','🍃'],'#ffc1d9,#c2538a 60%,#3a0f2a'],['reef','Coral Reef 🐠',220,'fly',['🐠','🐟','💧'],'#27c8d9,#0a4f7a 60%,#031a33'],
+ ['hearts','Love Rain 💖',260,'up',['💖','❤️','💕'],'#ff6f9c,#a3205c 60%,#2a0a1c'],['stars','Starry Night ✨',320,'tw',['⭐','✨','🌙'],'#243a8a,#0e1540 60%,#04061a'],
+ ['party','Balloon Party 🎈',380,'up',['🎈','🎉','🎈'],'#5ec8ff,#3b6fe0 60%,#14245e'],['rocket','Rocket Run 🚀',450,'fly',['🚀','🛸','👾'],'#6a3de8,#2a1170 60%,#0a0420'],
+ ['ember','Ember Cave 🔥',500,'up',['🔥','✨','🔥'],'#ff8a1f,#8a1a0a 60%,#1c0502']];
+/* Tube skins: [id, name, price, swatch, css, animated?] */
+const TBS=[['neonpink','Neon Pink',160,'#ff4fd8','border-color:#ff4fd8;box-shadow:0 0 12px #ff4fd8,inset 0 0 10px rgba(255,79,216,.3)'],
+ ['frost','Frozen Glass',220,'#bfefff','border-color:#d8f6ff;background:linear-gradient(90deg,rgba(210,245,255,.4),rgba(255,255,255,.1) 40%,rgba(200,240,255,.28));box-shadow:0 0 12px rgba(190,240,255,.6),inset 0 0 8px #fff8'],
+ ['bamboo','Bamboo',240,'#8bc34a','border-color:#8bc34a;background:repeating-linear-gradient(0deg,rgba(139,195,74,.45) 0 34px,rgba(60,100,30,.6) 34px 38px)'],
+ ['candystripe','Candy Stripe',260,'repeating-linear-gradient(45deg,#ff6fa5 0 6px,#fff 6px 12px)','border-color:#ff6fa5;background:repeating-linear-gradient(45deg,rgba(255,111,165,.45) 0 7px,rgba(255,255,255,.22) 7px 14px)'],
+ ['obsidian','Obsidian',300,'linear-gradient(#4b2d7a,#14081f)','border-color:#a35cff;background:linear-gradient(90deg,rgba(20,10,40,.85),rgba(70,40,110,.5));box-shadow:0 0 12px rgba(163,92,255,.7)'],
+ ['royal','Royal Gold',450,'linear-gradient(#ffe27a,#c9971c)','--c2:#fff3b0;border-color:#ffd54a;background:linear-gradient(90deg,rgba(255,213,74,.4),rgba(255,255,255,.08),rgba(255,213,74,.35));box-shadow:0 0 10px rgba(255,213,74,.6)',1],
+ ['plasma','Plasma Pulse',520,'linear-gradient(90deg,#4ff,#f4f)','--c2:#f4f;border-color:#4ff;box-shadow:0 0 12px #4ff,0 0 16px rgba(255,68,255,.6)',1]];
+const c2=document.createElement('style');c2.textContent=`#ebg{position:fixed;inset:0;overflow:hidden;pointer-events:none;display:none}
+#ebg i{position:absolute;left:var(--x);top:var(--y);font-style:normal;font-size:var(--s);opacity:.55;animation:var(--k) var(--d) linear var(--w) infinite}
+#ebg.m-up i{--k:eup;top:auto;bottom:-12vh}#ebg.m-down i{--k:edn;top:-12vh}#ebg.m-fly i{--k:efl;left:-12vw}#ebg.m-tw i{--k:etw;animation-duration:calc(var(--d)/3)}
+@keyframes eup{50%{transform:translate(5vw,-55vh)}to{transform:translate(-3vw,-120vh)}}@keyframes edn{to{transform:translate(20vw,125vh) rotate(300deg)}}
+@keyframes efl{50%{transform:translate(60vw,-5vh) rotate(8deg)}to{transform:translate(125vw,4vh)}}@keyframes etw{0%,100%{opacity:.1;transform:scale(.6)}50%{opacity:.85;transform:scale(1.25)}}
+@keyframes tgA{50%{border-color:var(--c2)}}@media(prefers-reduced-motion:reduce){#ebg i{animation:none}}`
+ +BGS.map(b=>'body.sb-'+b[0]+'{background:radial-gradient(110% 70% at 50% 0,'+b[5]+')}').join('')
+ +TBS.map(t=>'body.ts-'+t[0]+' .tube:not(.sel):not(.done){'+t[4]+'}'+(t[5]?'body.ts-'+t[0]+' .tube:not(.sel):not(.done):not(.shake){animation:tgA 2.6s ease-in-out infinite}':'')).join('');
+document.head.appendChild(c2);
+/* One reusable emoji layer (14 elements, transform/opacity animation only); hidden unless an emoji background is equipped. */
+const eb=document.createElement('div');eb.id='ebg';document.body.prepend(eb);
+for(let i=0;i<14;i++){const p=document.createElement('i');p.style.cssText='--x:'+(i*7.3%96)+'%;--y:'+(8+i*37%80)+'%;--d:'+(10+i%5*2.5)+'s;--w:-'+(i*1.9)+'s;--s:'+(20+i%4*7)+'px';eb.appendChild(p)}
+const BGE={};BGS.forEach(b=>BGE[b[0]]=b);
+function bgEmoji(){const v=BGE[S.sh.eq.bg],K=eb.children;eb.style.display=v?'block':'none';if(!v)return;eb.className='m-'+v[3];for(let i=0;i<K.length;i++)K[i].textContent=v[4][i%v[4].length]}
+const _sa=shApply;shApply=()=>{_sa();bgEmoji()};
+SHOP.push(...BGS.map(b=>[b[0],'bg',b[1],b[2],'radial-gradient('+b[5]+')']),...TBS.map(t=>[t[0],'tube',t[1],t[2],t[3]]));
+SHOP.sort((a,b)=>a[3]-b[3]);
+
+/* ===== SINGLE CURRENCY (coins only), Encyclopedia fixes, desktop layout ===== */
+if(!P.pm){const o=Math.max(0,+S.fu.pts||0);COS.forEach(c=>{if(o>=c[3])S.sh.own['f_'+c[0]]=1});S.sh.c+=o;S.fu.pts=0;P.pm=1;asave()}
+const FP={gold:350,neon:400,gem:300,aurora:450},FI={gold:'🥇',neon:'🔆',gem:'💎',aurora:'🌌'};
+$('#stb').insertAdjacentHTML('afterend','<h3>Fusion specials</h3><div id="sfs" class="shg"></div>');
+function sfsShow(){const H=S.sh;$('#sfs').innerHTML=COS.map(c=>{const own=H.own['f_'+c[0]],eq=S.fu.eq[c[1]]===c[0];return'<button class="shf'+(eq?' eqp':'')+'" data-f="'+c[0]+'"'+(own||H.c>=FP[c[0]]?'':' disabled')+'><span>'+FI[c[0]]+' '+c[2]+'</span><b>'+(own?(eq?'✅ Equipped':'Equip'):'💰 '+FP[c[0]])+'</b></button>'}).join('')}
+const _ss=shShow;shShow=()=>{_ss();sfsShow()};
+$('#sfs').onclick=e=>{const b=e.target.closest('.shf');if(!b||b.disabled)return;const c=COS.find(x=>x[0]===b.dataset.f),H=S.sh,q=S.fu.eq,k='f_'+c[0];if(!H.own[k]){H.c-=FP[c[0]];H.own[k]=1;q[c[1]]=c[0];sfx('win')}else{q[c[1]]=q[c[1]]===c[0]?'':c[0];sfx('click')}save();fuSkin();shShow();shLabels()};
+$('#enbk').onclick=()=>{sfx('click');ov('#enc',false)};
+addEventListener('keydown',e=>{if(e.key==='Escape')['#enc','#whl'].forEach(s=>{if($(s).classList.contains('on')){ov(s,false);e.stopImmediatePropagation()}})},true);
+const c3=document.createElement('style');c3.textContent=`#mw{display:flex;flex-flow:row wrap;justify-content:center;align-content:center;gap:clamp(6px,1.2vh,12px) 10px;width:min(94vw,420px)}#mw>#logo,#mw>h1,#mw>p,#mw>h3,#mw>#wl,#mw>button.big{flex:0 0 100%}#mw>#logo{font-size:clamp(44px,9vh,76px);line-height:1}#mw>h1{font-size:clamp(24px,4.2vh,34px)}#mw>p{font-size:13px}#mw>button.big{max-width:300px;margin:0 auto;font-size:clamp(17px,2.6vh,20px);padding:clamp(10px,1.8vh,15px) 24px}#mw>button:not(.big){flex:0 0 calc(50% - 5px);min-width:0;padding:9px 6px;font-size:14px;line-height:1.15}#mw>#wl{width:100%;gap:6px}#wl button{padding:6px 2px;font-size:11px;line-height:1.15}#wl button span{font-size:clamp(18px,3.2vh,26px)}#wl button small{font-size:10px}@media(max-height:640px){#wh{zoom:.75}#whl .card{padding:16px 20px;gap:8px}}@media(max-height:600px){#wh{zoom:.58}}@media(max-width:420px){#hud>span>button[aria-label=Fullscreen]{display:none}}@media(max-width:360px){#hud button{padding:8px 9px}#hud b{font-size:15px}}#fh{display:none!important}.bk{align-self:flex-start;padding:7px 12px}
+.shf{display:flex;align-items:center;gap:10px;text-align:left}.shf span{flex:1}.shf b{font-size:13px}.shf:disabled{opacity:.45}.shf.eqp{border-color:#ffd54a}
+#enc .card,#whl .card{max-height:92vh;overflow-y:auto;justify-content:flex-start}#enc .card{width:min(94vw,520px)}
+@media(min-width:900px) and (min-height:540px){h1{font-size:clamp(44px,5vw,64px)}#logo{font-size:96px}
+#mw{width:min(92vw,780px);gap:14px 16px}#mw>#logo{font-size:96px}#mw>h1{font-size:clamp(44px,5vw,64px)}#mw>button:not(.big){flex:0 0 calc((100% - 32px)/3);font-size:17px;padding:13px 10px}#mw>button.big{max-width:340px;font-size:24px;padding:16px 40px}
+#mw>#wl{grid-template-columns:repeat(6,1fr);gap:10px}#wl button{font-size:14px;padding:12px 4px}#wl button span{font-size:34px}
+#game{align-items:center}#hud,#tip,#pu{width:min(100%,880px)}#hud b{font-size:24px}#hud button{font-size:18px;padding:10px 16px}#tip{font-size:17px}#area{width:100%;max-width:1200px}
+.card{padding:32px 40px;gap:14px}.card h2{font-size:30px}.card button{font-size:16px}#pu button{font-size:15px;padding:12px 22px}
+#sh .card,#fc .card,#enc .card{width:min(94vw,860px)}.shg{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}#fcg{grid-template-columns:repeat(3,1fr)}.pg{grid-template-columns:repeat(auto-fill,minmax(64px,1fr))}.pg b{font-size:36px}}`;document.head.appendChild(c3);
+/* ===== MOBILE FIT: the start screen never scrolls (compact layout + auto-fit zoom as a safety net) ===== */
+const mw=document.createElement('div');mw.id='mw';[...$('#menu').children].forEach(c=>{if(!c.hasAttribute('data-m'))mw.appendChild(c)});$('#menu').appendChild(mw);
+function fitMenu(){const m=$('#menu');if(!m.classList.contains('on'))return;mw.style.zoom=1;const cs=getComputedStyle(m),av=m.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom),h=mw.getBoundingClientRect().height;if(h>av)mw.style.zoom=Math.max(.5,av/h*.98)}
+new ResizeObserver(fitMenu).observe($('#menu'));addEventListener('orientationchange',()=>setTimeout(fitMenu,200));
+const _bm2=buildMenu;buildMenu=()=>{_bm2();requestAnimationFrame(fitMenu)};
+muteUI();buildMenu();fuInit();setInterval(ambient,20000);
+})();
+</script>
+</body>
+</html>
